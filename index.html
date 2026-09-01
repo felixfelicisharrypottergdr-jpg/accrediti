@@ -106,6 +106,34 @@
         button:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 10px 20px rgba(122,81,25,.34); }
         button:active { transform: translateY(0); }
 
+        .btn-row { display: flex; gap: 12px; }
+        .btn-row button { flex: 1; }
+
+        .btn-secondary {
+            background: var(--parchment-panel); color: var(--ink); border: 2px solid var(--gold-soft) !important;
+            box-shadow: none;
+        }
+        .btn-secondary:hover { box-shadow: 0 4px 10px rgba(122,81,25,.15); }
+
+        .btn-danger {
+            background: var(--parchment-panel); color: var(--red); border: 2px solid var(--red) !important;
+            box-shadow: none;
+        }
+        .btn-danger:hover { background: var(--red-soft); }
+
+        .btn-copia {
+            width: auto; padding: 8px 16px; font-size: 13px; margin-top: 8px;
+            background: var(--parchment-panel); color: var(--ink); border: 2px solid var(--gold-soft) !important;
+            box-shadow: none;
+        }
+        .btn-copia:hover { box-shadow: 0 4px 10px rgba(122,81,25,.15); }
+
+        .btn-torna-su {
+            position: fixed; bottom: 26px; right: 26px; width: 52px; height: 52px; padding: 0;
+            border-radius: 50%; font-size: 20px; z-index: 999; display: flex;
+            align-items: center; justify-content: center;
+        }
+
         .output-box {
             background-color: var(--ink-panel); color: #EDE3CE; border-left: 4px solid var(--green);
             font-family: 'JetBrains Mono', monospace; border-color: var(--ink-panel-2);
@@ -164,14 +192,19 @@
             <strong>FORMATO ESATTO RICHIESTO, una voce per riga:</strong><br>
             <code>+N Nome Statistica</code> oppure <code>-N Nome Statistica</code> — segno, numero (usa la virgola per i decimali, es. <code>24,5</code>), uno spazio, il nome della statistica per esteso.<br><br>
             <strong>Nomi statistica riconosciuti:</strong> Punti Post, Galeoni, Punti Casa, Dialettica, Popolarità, Stima Docenti, Bontà, Malvagità, Virtuoso, Sinistro, Prestigio, Acume, Empatia, Percezione, Potenza, Tecnica, Volontà, Destrezza, Fatica, Resistenza, Salute.<br>
-            Una statistica assente dal nome esatto elencato sopra, o assente dalla Scheda Valori incollata in Box B, viene segnalata come non applicata invece di essere ignorata in silenzio.<br><br>
+            Una statistica assente dal nome esatto elencato sopra, o assente dalla Scheda Valori incollata in Box B, viene segnalata come non applicata invece di essere ignorata in silenzio.<br>
+            Per il fondo <b>Galeoni Extra</b> (i 100 Galeoni una tantum spendibili solo per Eventi/Role a pagamento), usa <code>+N Galeoni Extra</code> o <code>-N Galeoni Extra</code>: viene gestito separatamente e non si somma ai Galeoni normali.<br><br>
             Esempio: <code>+24 Punti Post</code> ↵ <code>+40 Punti Casa</code> ↵ <code>-15 Galeoni</code>
         </div>
         <textarea id="inputComplessivo" placeholder="+24 Punti Post&#10;+40 Punti Casa&#10;+15 Galeoni"></textarea>
 
         <label for="inputScheda">Box B — Codice Scheda Valori Originale <span class="format-tag">HTML completo</span></label>
-        <div class="guida-box"><strong>COSA INSERIRE:</strong> Apri il messaggio della Scheda Valori del PG in modalità "Modifica", seleziona TUTTO il codice HTML (dall'apertura del primo <code>&lt;div&gt;</code> alla chiusura dell'ultimo), copialo e incollalo qui integralmente, senza tagli. Da questo unico blocco il tool legge e aggiorna Parametri Sociali/Magici/Fisici, Prestigio, Punti Post, Galeoni, Inventario, voti/materie o livelli di Sapienza. <strong>Non</strong> incollare qui la Scheda Biografica: non serve e non verrà toccata.</div>
+        <div class="guida-box"><strong>COSA INSERIRE:</strong> Apri il messaggio della Scheda Valori del PG in modalità "Modifica", seleziona TUTTO il codice HTML (dall'apertura del primo <code>&lt;div&gt;</code> alla chiusura dell'ultimo), copialo e incollalo qui integralmente, senza tagli. Da questo unico blocco il tool legge e aggiorna Parametri Sociali/Magici/Fisici, Prestigio, Punti Post, Galeoni, fondo Galeoni Extra, Inventario, voti/materie o livelli di Sapienza. <strong>Non</strong> incollare qui la Scheda Biografica: non serve e non verrà toccata.</div>
         <textarea id="inputScheda"></textarea>
+
+        <label for="inputComplessivoOriginale">Box C — Testo originale "Complessivo Accredito" <span class="format-tag">opzionale · controllo incrociato</span></label>
+        <div class="guida-box"><strong>COSA INSERIRE:</strong> Puoi incollare qui il solo blocco <code>COMPLESSIVO ACCREDITO</code> oppure anche l'intera Lista della Spesa: il generatore isola automaticamente il riepilogo finale e ignora bonus descrittivi di oggetti/Sapienze. Lo confronta con il Box A e, quando trova una differenza inequivocabile, usa il riepilogo finale come fonte prioritaria — segnalando comunque ogni discrepanza nei risultati. Riconosce anche formule come <code>-25 dei 100 extra, -450 di quelli in scheda</code>: il primo valore modifica il fondo Extra, il secondo i Galeoni normali.</div>
+        <textarea id="inputComplessivoOriginale" style="min-height:110px" placeholder="COMPLESSIVO ACCREDITO&#10;Complessivo PP spesi e guadagnati: +34,5 PP&#10;Complessivo Galeoni spesi e guadagnati: -25 dei 100 extra, -450 di quelli in scheda&#10;Altri punti/altro guadagnati o persi: +2 Prestigio +1,5 Sinistro"></textarea>
     </div>
 
     <div class="panel">
@@ -217,17 +250,25 @@
         <input type="number" id="inputPuntiCasaIniziali">
     </div>
 
-    <button onclick="elaboraTerminale()">Genera risultati</button>
+    <div class="btn-row">
+        <button onclick="elaboraTerminale()">Genera risultati</button>
+        <button type="button" class="btn-danger" onclick="resetGeneratore()">🗑️ Cancella tutto</button>
+    </div>
 
     <div class="panel">
         <h2><span class="step-num">3</span>Risultati Finali</h2>
         <div id="ignorati_box" class="warn-box"></div>
         <label for="outForum">Risultato per il Registro Accrediti (copia e incolla sul forum):</label>
         <textarea id="outForum" class="output-box" readonly=""></textarea>
+        <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')">📋 Copia registro</button>
 
         <label for="outScheda">Nuovo Codice Scheda Valori (Aggiornato — Punti, Sapienze/Studi, Bagaglio, Conoscenze):</label>
         <textarea id="outScheda" class="output-box" readonly=""></textarea>
+        <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')">📋 Copia scheda aggiornata</button>
     </div>
+
+    <button type="button" class="btn-torna-su" onclick="tornaSu()" title="Torna su">⬆️</button>
+
 </div>
 
 <script>
@@ -251,6 +292,58 @@ function toNumber(val) {
   return Number.isFinite(n) ? n : 0;
 }
 function escapeRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// ============ STRUMENTI DI SUPPORTO (Torna su, Cancella tutto, Copia) ============
+function tornaSu() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetGeneratore() {
+  if (!confirm('Cancellare tutti i campi e ricominciare da capo? Questa azione non si può annullare.')) return;
+
+  document.querySelectorAll('textarea, input[type="text"], input[type="number"], input[type="url"]').forEach(el => {
+    el.value = '';
+  });
+
+  const studente = document.getElementById('pgStudente');
+  const adulto = document.getElementById('pgAdulto');
+  if (studente) studente.checked = false;
+  if (adulto) adulto.checked = true;
+
+  const warnBox = document.getElementById('ignorati_box');
+  if (warnBox) {
+    warnBox.classList.remove('show');
+    warnBox.innerHTML = '';
+  }
+
+  tornaSu();
+}
+
+async function copiaCampo(idCampo, idBottone) {
+  const campo = document.getElementById(idCampo);
+  const btn = document.getElementById(idBottone);
+  if (!campo || !campo.value.trim()) return;
+  const etichettaOriginale = btn.textContent;
+  function mostraConferma(ok) {
+    btn.textContent = ok ? '✅ Copiato!' : '⚠️ Copia manualmente (Ctrl+C)';
+    setTimeout(() => { btn.textContent = etichettaOriginale; }, 2000);
+  }
+  try {
+    await navigator.clipboard.writeText(campo.value);
+    mostraConferma(true);
+  } catch (e) {
+    campo.removeAttribute('readonly');
+    campo.focus();
+    campo.select();
+    try {
+      mostraConferma(document.execCommand('copy'));
+    } catch (e2) {
+      mostraConferma(false);
+    }
+    campo.setAttribute('readonly', 'readonly');
+  }
+}
+
 function normalizeText(s) {
   return String(s || '')
     .toLowerCase()
@@ -314,6 +407,10 @@ function estraiDeltaDaBoxA() {
 
   for (const riga of righe) {
     const lower = normalizeText(riga);
+    // "Galeoni Extra" e' un fondo a parte (Box A dedicato piu' sotto): non va
+    // letto qui come una normale variazione di Galeoni, altrimenti verrebbe
+    // conteggiato due volte.
+    if (/\bgaleon[ei]\s+extra\b/.test(lower)) continue;
     for (const stat in STAT_ALIASES) {
       const alias = STAT_ALIASES[stat].find(a => lower.includes(normalizeText(a)));
       if (!alias) continue;
@@ -324,6 +421,179 @@ function estraiDeltaDaBoxA() {
     }
   }
   return deltas;
+}
+
+function estraiDeltaGaleoniExtraDaBoxA() {
+  const txt = document.getElementById('inputComplessivo').value || '';
+  const rx = /([+-])\s*(\d+(?:[.,]\d+)?)\s*(?:Galeoni\s+Extra|Extra\s+Galeoni)\b/gi;
+  let totale = 0;
+  let m;
+  while ((m = rx.exec(txt)) !== null) totale += (m[1] === '-' ? -1 : 1) * toNumber(m[2]);
+  return totale;
+}
+
+function aggiornaGaleoniExtra(html, delta, baseRiferita) {
+  const risultato = {
+    html, delta: delta || 0, iniziale: null, inizialeScheda: null, finale: null,
+    baseDaTesto: baseRiferita !== null && baseRiferita !== undefined ? Number(baseRiferita) : null,
+    applicato: false, errore: null
+  };
+  if (!delta) return risultato;
+
+  const rx = /([+-]?\d+(?:[.,]\d+)?)(\s+extra\s+da\s+spendere\b[^\n<]*)/i;
+  const m = html.match(rx);
+  if (!m) {
+    risultato.errore = 'Richiesta una variazione dei Galeoni Extra, ma nella Scheda Valori non è stata trovata la riga "extra da spendere".';
+    return risultato;
+  }
+
+  const inizialeScheda = toNumber(m[1]);
+  const baseCalcolo = risultato.baseDaTesto !== null && Number.isFinite(risultato.baseDaTesto)
+    ? risultato.baseDaTesto
+    : inizialeScheda;
+  const finale = baseCalcolo + delta;
+
+  risultato.inizialeScheda = inizialeScheda;
+  risultato.iniziale = baseCalcolo;
+  risultato.finale = finale;
+
+  if (finale < 0) {
+    risultato.errore = `La variazione dei Galeoni Extra porterebbe il fondo sotto zero (${formatNumeroItaliano(baseCalcolo)} → ${formatNumeroItaliano(finale)}). Non è stata applicata.`;
+    return risultato;
+  }
+
+  risultato.html = html.replace(rx, `${formatNumeroItaliano(finale)}$2`);
+  risultato.applicato = true;
+  return risultato;
+}
+
+function patternAliases(stat) {
+  const aliases = STAT_ALIASES[stat];
+  if (!aliases || !aliases.length) return null;
+  return aliases.map(escapeRx).join('|');
+}
+function valoreConSegno(segno, valore) {
+  const n = Math.abs(toNumber(valore));
+  return segno === '-' ? -n : n;
+}
+
+function estraiDatiDaComplessivoOriginale(raw) {
+  const testoCompleto = String(raw || '').replace(/\r/g, '');
+  const deltas = {};
+  const presenti = new Set();
+  for (const stat in STAT_ALIASES) deltas[stat] = 0;
+
+  // Il Box C puo' contenere anche l'intera lista della spesa. Per evitare falsi
+  // positivi (es. "+2 Tecnica" nella descrizione di un oggetto), leggiamo SOLO
+  // il blocco finale "COMPLESSIVO ACCREDITO", se presente.
+  let text = testoCompleto;
+  const marker = /COMPLESSIVO\s+ACCREDITO/i.exec(testoCompleto);
+  if (marker) {
+    text = testoCompleto.slice(marker.index);
+    const dopoTitolo = text.replace(/^.*?COMPLESSIVO\s+ACCREDITO[^\n]*\n?/i, '');
+    const stop = dopoTitolo.search(/\n\s*<hr\s*\/?\s*>|\n\s*\[size\s*=|\n\s*#{1,6}\s+/i);
+    text = stop >= 0 ? dopoTitolo.slice(0, stop) : dopoTitolo;
+  }
+
+  const righe = text.split(/\n+/).map(r => r.trim()).filter(Boolean);
+  const trovaRiga = rx => righe.find(r => rx.test(r)) || '';
+
+  function numeroConSegno(rawNum) {
+    const m = String(rawNum || '').match(/([+-])?\s*(\d+(?:[.,]\d+)?)/);
+    if (!m) return null;
+    const n = toNumber(m[2]);
+    return m[1] === '-' ? -Math.abs(n) : Math.abs(n);
+  }
+
+  function estraiNettoDaRiga(riga, unitaRx) {
+    if (!riga) return null;
+    const eq = riga.match(new RegExp('=\\s*([+-]?\\s*\\d+(?:[.,]\\d+)?)\\s*(?:' + unitaRx + ')\\b', 'i'));
+    if (eq) return numeroConSegno(eq[1]);
+    const dopoDuePunti = riga.includes(':') ? riga.slice(riga.indexOf(':') + 1) : riga;
+    const primo = dopoDuePunti.match(new RegExp('([+-]?\\s*\\d+(?:[.,]\\d+)?)\\s*(?:' + unitaRx + ')\\b', 'i'));
+    return primo ? numeroConSegno(primo[1]) : null;
+  }
+
+  const rigaPP = trovaRiga(/Complessivo\s+PP\s+spesi\s+e\s+guadagnati\s*:/i);
+  const nettoPP = estraiNettoDaRiga(rigaPP, 'PP|Punti\\s+Post');
+  if (nettoPP !== null) { deltas['Punti Post'] = nettoPP; presenti.add('Punti Post'); }
+
+  // Galeoni: supporta sia il netto normale ("-500 G") sia la forma separata
+  // "-25 dei 100 extra, -450 di quelli in scheda".
+  const rigaG = trovaRiga(/Complessivo\s+Galeoni\s+spesi\s+e\s+guadagnati\s*:/i);
+  let extraGaleoni = 0, extraPresente = false, baseExtraRiferita = null;
+
+  if (rigaG) {
+    const mExtra = rigaG.match(/([+-])\s*(\d+(?:[.,]\d+)?)\s*(?:(?:dei|di|delle)\s+)?(\d+(?:[.,]\d+)?)?\s*extra\b/i);
+    if (mExtra) {
+      extraGaleoni = valoreConSegno(mExtra[1], mExtra[2]);
+      extraPresente = true;
+      if (mExtra[3] !== undefined) baseExtraRiferita = toNumber(mExtra[3]);
+    }
+    const mBaseExtra = rigaG.match(/(?:dei|di|delle)\s+(\d+(?:[.,]\d+)?)\s+extra\b/i);
+    if (mBaseExtra) baseExtraRiferita = toNumber(mBaseExtra[1]);
+
+    const mScheda = rigaG.match(/([+-])\s*(\d+(?:[.,]\d+)?)\s+(?:di\s+)?(?:quelli|quelle)\s+in\s+scheda\b/i);
+    if (mScheda) {
+      deltas['Galeoni'] = valoreConSegno(mScheda[1], mScheda[2]);
+      presenti.add('Galeoni');
+    } else {
+      const nettoG = estraiNettoDaRiga(rigaG, 'G|Galeon[ei]');
+      if (nettoG !== null) { deltas['Galeoni'] = nettoG; presenti.add('Galeoni'); }
+    }
+  }
+
+  const rigaCasa = trovaRiga(/Complessivo\s+Punti\s+Casa\b/i);
+  const nettoCasa = estraiNettoDaRiga(rigaCasa, 'Punti\\s+Casa');
+  if (nettoCasa !== null) { deltas['Punti Casa'] = nettoCasa; presenti.add('Punti Casa'); }
+
+  // Le altre statistiche vengono lette SOLO dalla riga "Altri punti/altro".
+  // Cosi' bonus descrittivi di oggetti, pozioni, Sapienze ecc. non diventano
+  // variazioni permanenti della Scheda Valori.
+  const rigaAltri = trovaRiga(/Altri\s+punti\s*\/\s*altro\s+guadagnati\s+o\s+persi\s*:/i);
+  if (rigaAltri) {
+    for (const stat in STAT_ALIASES) {
+      if (['Punti Post', 'Galeoni', 'Punti Casa'].includes(stat)) continue;
+      const aliases = patternAliases(stat);
+      if (!aliases) continue;
+      const rx = new RegExp('([+-])\\s*(\\d+(?:[.,]\\d+)?)\\s*(?:' + aliases + ')(?=\\s|$|[,;.)])', 'gi');
+      let m;
+      while ((m = rx.exec(rigaAltri)) !== null) { deltas[stat] += valoreConSegno(m[1], m[2]); presenti.add(stat); }
+    }
+  }
+
+  return { deltas, presenti, extraGaleoni, extraPresente, baseExtraRiferita };
+}
+
+function riconciliaVariazioniConOriginale(deltasBoxA, extraBoxA, rawOriginale) {
+  const deltas = { ...deltasBoxA };
+  let extraGaleoni = extraBoxA || 0;
+  const correzioni = [];
+  const originale = estraiDatiDaComplessivoOriginale(rawOriginale);
+
+  originale.presenti.forEach(stat => {
+    const daBox = deltas[stat] || 0;
+    const daOriginale = originale.deltas[stat] || 0;
+    if (Math.abs(daBox - daOriginale) > 1e-9) {
+      correzioni.push(
+        `${stat}: Box A ${daBox === 0 ? 'assente/0' : formatNumeroItaliano(daBox)}, ` +
+        `testo originale ${formatNumeroItaliano(daOriginale)} — usato il testo originale.`
+      );
+    }
+    deltas[stat] = daOriginale;
+  });
+
+  if (originale.extraPresente) {
+    if (Math.abs(extraGaleoni - originale.extraGaleoni) > 1e-9) {
+      correzioni.push(
+        `Galeoni Extra: Box A ${extraGaleoni === 0 ? 'assente/0' : formatNumeroItaliano(extraGaleoni)}, ` +
+        `testo originale ${formatNumeroItaliano(originale.extraGaleoni)} — usato il testo originale.`
+      );
+    }
+    extraGaleoni = originale.extraGaleoni;
+  }
+
+  return { deltas, extraGaleoni, correzioni, originale };
 }
 
 function estraiValoriInizialiScheda(html) {
@@ -717,7 +987,7 @@ function aggiornaBagaglio(html, modInventarioRaw) {
   return { html: out, nonRiconosciute };
 }
 
-function costruisciRegistro(iniziali, finali, deltaCasa, puntiCasaIniziali) {
+function costruisciRegistro(iniziali, finali, deltaCasa, puntiCasaIniziali, extraInfo) {
   const lines = [];
   const mk = (label, short, key) => {
     const v0 = iniziali[key] || 0;
@@ -728,7 +998,14 @@ function costruisciRegistro(iniziali, finali, deltaCasa, puntiCasaIniziali) {
   };
 
   lines.push(mk('Complessivo PP spesi e guadagnati:', 'PP', 'Punti Post') || '<b>Complessivo PP spesi e guadagnati:</b> //');
-  lines.push(mk('Complessivo Galeoni spesi e guadagnati:', 'G', 'Galeoni') || '<b>Complessivo Galeoni spesi e guadagnati:</b> //');
+
+  let rigaGaleoni = mk('Complessivo Galeoni spesi e guadagnati:', 'G', 'Galeoni');
+  if (extraInfo && extraInfo.applicato && extraInfo.delta) {
+    const d = extraInfo.delta;
+    const extraTxt = `[color=${d >= 0 ? 'green' : 'red'}]${d >= 0 ? '+' : ''}${formatNumeroItaliano(d)} G extra[/color] [${formatNumeroItaliano(extraInfo.iniziale)} ➔ ${formatNumeroItaliano(extraInfo.finale)}]`;
+    rigaGaleoni = rigaGaleoni ? `${rigaGaleoni}; ${extraTxt}` : `<b>Complessivo Galeoni spesi e guadagnati:</b> ${extraTxt}`;
+  }
+  lines.push(rigaGaleoni || '<b>Complessivo Galeoni spesi e guadagnati:</b> //');
 
   const boxHPuntiCasaCompilato =
     String(document.getElementById('inputPuntiCasaIniziali').value || '').trim() !== '';
@@ -934,21 +1211,29 @@ function aggiornaPianoOSapienze(html) {
 
 function elaboraTerminale() {
   // Un solo documento (Scheda Valori) su cui vengono applicate in sequenza
-  // tutte le modifiche: Punti/Prestigio/Bagaglio, poi Materie/Sapienze.
+  // tutte le modifiche: Punti/Prestigio, fondo Extra, Bagaglio, Materie/Sapienze.
   const schedaValoriHTML = document.getElementById('inputScheda').value || '';
   const modInventario = document.getElementById('modInventario').value || '';
   const puntiCasaIniziali = parseInt(document.getElementById('inputPuntiCasaIniziali').value, 10) || 0;
+  const rawOriginale = document.getElementById('inputComplessivoOriginale')?.value || '';
 
-  const deltas = estraiDeltaDaBoxA();
+  const deltasBoxA = estraiDeltaDaBoxA();
+  const extraBoxA = estraiDeltaGaleoniExtraDaBoxA();
+  const riconciliati = riconciliaVariazioniConOriginale(deltasBoxA, extraBoxA, rawOriginale);
+  const deltas = riconciliati.deltas;
+
   const dataScheda = estraiValoriInizialiScheda(schedaValoriHTML);
-
   const updatedValori = aggiornaSchedaConValori(schedaValoriHTML, dataScheda, deltas);
+
   let html = updatedValori.html;
+  const extraInfo = aggiornaGaleoniExtra(html, riconciliati.extraGaleoni, riconciliati.originale.baseExtraRiferita);
+  html = extraInfo.html;
+
   const risultatoBagaglio = aggiornaBagaglio(html, modInventario);
   html = risultatoBagaglio.html;
   html = aggiornaPianoOSapienze(html);
 
-  const registro = costruisciRegistro(dataScheda.iniziali, updatedValori.finali, deltas['Punti Casa'] || 0, puntiCasaIniziali);
+  const registro = costruisciRegistro(dataScheda.iniziali, updatedValori.finali, deltas['Punti Casa'] || 0, puntiCasaIniziali, extraInfo);
 
   document.getElementById('outForum').value = registro;
   document.getElementById('outScheda').value = html;
@@ -956,6 +1241,11 @@ function elaboraTerminale() {
   const warnBox = document.getElementById('ignorati_box');
   if (warnBox) {
     const avvisiStat = [];
+
+    riconciliati.correzioni.forEach(msg => {
+      avvisiStat.push('<b>⚠ Controllo incrociato (Box C):</b> ' + msg);
+    });
+
     if (updatedValori.ignorati && updatedValori.ignorati.length) {
       avvisiStat.push('<b>⚠ Attenzione:</b> il Box A contiene ' +
         (updatedValori.ignorati.length > 1 ? 'queste statistiche' : 'questa statistica') +
@@ -963,6 +1253,22 @@ function elaboraTerminale() {
         ' in questa Scheda Valori, quindi <u>non sono state applicate</u> (né conteggiate nel registro): <b>' +
         updatedValori.ignorati.join(', ') + '</b>. Controlla il nome della statistica o il tipo di scheda incollato in Box B.');
     }
+
+    if (extraInfo.errore) avvisiStat.push('<b>⚠ Galeoni Extra:</b> ' + extraInfo.errore);
+
+    if (
+      riconciliati.originale.extraPresente &&
+      riconciliati.originale.baseExtraRiferita !== null &&
+      extraInfo.inizialeScheda !== null &&
+      Math.abs(riconciliati.originale.baseExtraRiferita - extraInfo.inizialeScheda) > 1e-9
+    ) {
+      avvisiStat.push(
+        `<b>⚠ Galeoni Extra:</b> il testo originale (Box C) indica una base di ${formatNumeroItaliano(riconciliati.originale.baseExtraRiferita)} Galeoni Extra, ` +
+        `mentre la Scheda Valori (Box B) ne contiene ${formatNumeroItaliano(extraInfo.inizialeScheda)}. ` +
+        `Per il calcolo è stata usata la base dichiarata nel Box C, ottenendo ${formatNumeroItaliano(extraInfo.finale)} Galeoni Extra finali.`
+      );
+    }
+
     if (risultatoBagaglio.nonRiconosciute && risultatoBagaglio.nonRiconosciute.length) {
       avvisiStat.push('<b>⚠ Attenzione:</b> il Box G contiene ' +
         (risultatoBagaglio.nonRiconosciute.length > 1 ? 'queste righe' : 'questa riga') +
@@ -970,6 +1276,19 @@ function elaboraTerminale() {
         ' a nessuna sintassi valida, quindi <u>non ' + (risultatoBagaglio.nonRiconosciute.length > 1 ? 'sono state applicate' : 'è stata applicata') + '</u>: <b>' +
         risultatoBagaglio.nonRiconosciute.map(r => r.replace(/</g, '&lt;')).join('</b>, <b>') + '</b>. Usa uno dei tre formati indicati nella guida sopra Box G.');
     }
+
+    ['Punti Post', 'Galeoni'].forEach(nomeCampo => {
+      if (Object.prototype.hasOwnProperty.call(updatedValori.finali, nomeCampo) && updatedValori.finali[nomeCampo] < 0) {
+        const haDebito = new RegExp('<b>\\s*Debito \\(' + escapeRx(nomeCampo) + '\\):', 'i').test(html);
+        if (!haDebito) {
+          avvisiStat.push(
+            `<b>⚠ Attenzione:</b> ${nomeCampo} risulta negativo (${formatNumeroItaliano(updatedValori.finali[nomeCampo])}) ` +
+            `e nella scheda non è presente una voce Debito (${nomeCampo}). Controlla che questo sia l'esito previsto dal regolamento.`
+          );
+        }
+      }
+    });
+
     if (avvisiStat.length) {
       warnBox.innerHTML = avvisiStat.join('<br><br>');
       warnBox.classList.add('show');
