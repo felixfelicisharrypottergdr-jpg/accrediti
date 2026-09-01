@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Generatore Accrediti — Scheda Valori</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --parchment: #EEE4CD;
+            --parchment-panel: #FBF7EC;
+            --parchment-deep: #E4D6AF;
+            --ink: #2B2233;
+            --ink-soft: #5B5468;
+            --gold: #9C6B24;
+            --gold-deep: #7A5119;
+            --gold-soft: #D8C08A;
+            --line: #D9C79A;
+            --green: #3F6B4F;
+            --green-soft: #E4EEE6;
+            --red: #8B3A3A;
+            --red-soft: #F5E6E1;
+            --amber: #A9762F;
+            --amber-soft: #FBF0D9;
+            --ink-panel: #241A2E;
+            --ink-panel-2: #2E2239;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Source Sans 3', 'Segoe UI', sans-serif;
+            background:
+                radial-gradient(ellipse at top left, rgba(156,107,36,0.06), transparent 55%),
+                radial-gradient(ellipse at bottom right, rgba(139,58,58,0.05), transparent 55%),
+                var(--parchment);
+            color: var(--ink);
+            margin: 0;
+            padding: 28px 20px 60px;
+            line-height: 1.5;
+        }
+        h1, h2 { color: var(--ink); font-weight: 600; margin-top: 0; }
+        .container { max-width: 1250px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+        .masthead { text-align: center; margin-bottom: 4px; }
+        .masthead .eyebrow {
+            font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 15px;
+            color: var(--gold-deep); letter-spacing: .04em; display: block; margin-bottom: 2px;
+        }
+        .masthead h1 {
+            font-family: 'Cinzel', serif; font-size: 32px; letter-spacing: .03em;
+            margin: 0; color: var(--ink);
+        }
+        .masthead .rule {
+            width: 220px; height: 1px; margin: 14px auto 0; position: relative;
+            background: linear-gradient(90deg, transparent, var(--gold-soft) 20%, var(--gold) 50%, var(--gold-soft) 80%, transparent);
+        }
+        .masthead .rule::after {
+            content: "✦"; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-52%);
+            background: var(--parchment); color: var(--gold); padding: 0 10px; font-size: 13px;
+        }
+
+        .panel {
+            background: var(--parchment-panel);
+            padding: 26px 28px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            box-shadow: 0 1px 2px rgba(43,34,51,.04), 0 8px 24px rgba(43,34,51,.06);
+        }
+        .panel h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 24px; font-weight: 600; letter-spacing: .01em;
+            display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 18px;
+        }
+        .step-num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border-radius: 50%;
+            background: var(--gold); color: #fff; font-family: 'Source Sans 3', sans-serif;
+            font-size: 14px; font-weight: 700; flex-shrink: 0;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 760px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        textarea, input {
+            width: 100%; padding: 12px 14px; border: 1px solid var(--gold-soft); border-radius: 8px;
+            box-sizing: border-box; font-family: 'JetBrains Mono', Consolas, monospace; font-size: 13px;
+            background-color: #fff; color: var(--ink);
+        }
+        textarea:focus, input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(156,107,36,.14); }
+        textarea { resize: vertical; min-height: 160px; }
+
+        .radio-group {
+            margin-bottom: 18px; background: var(--parchment-deep); padding: 12px 16px;
+            border-radius: 8px; font-weight: 600; border: 1px solid var(--gold-soft);
+        }
+        .radio-group label { display: inline; font-weight: normal; }
+
+        button {
+            background: linear-gradient(180deg, #B4813A, var(--gold-deep));
+            color: #fff9ec; padding: 15px 26px; border: none; border-radius: 9px; cursor: pointer;
+            font-family: 'Source Sans 3', sans-serif; font-size: 15px; font-weight: 700; width: 100%;
+            letter-spacing: .02em;
+            transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+            box-shadow: 0 1px 0 rgba(255,255,255,.25) inset, 0 6px 14px rgba(122,81,25,.28);
+        }
+        button:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 10px 20px rgba(122,81,25,.34); }
+        button:active { transform: translateY(0); }
+
+        .output-box {
+            background-color: var(--ink-panel); color: #EDE3CE; border-left: 4px solid var(--green);
+            font-family: 'JetBrains Mono', monospace; border-color: var(--ink-panel-2);
+            border-left-color: var(--green);
+        }
+
+        label { font-weight: 700; display: block; margin-bottom: 5px; margin-top: 16px; color: var(--ink-soft); font-size: 13.5px; }
+
+        .guida-box {
+            background: var(--amber-soft); border-left: 3px solid var(--amber); padding: 12px 14px;
+            margin-bottom: 10px; border-radius: 0 8px 8px 0; font-size: 13px; color: #5C4517; line-height: 1.55;
+        }
+        .guida-box strong { color: #4A3410; }
+        .guida-box code {
+            background: #fff; padding: 1px 5px; border: 1px solid var(--gold-soft); border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace; font-weight: 500; color: var(--red); font-size: 12px;
+        }
+        .info-box {
+            background: var(--green-soft); border-left: 3px solid var(--green); padding: 14px 16px;
+            margin-bottom: 10px; border-radius: 0 8px 8px 0; font-size: 13.5px; color: #234132; line-height: 1.6;
+        }
+        .warn-box {
+            display: none; background: var(--red-soft); border-left: 3px solid var(--red); padding: 12px 14px;
+            margin-top: 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: #5B2323; line-height: 1.55;
+        }
+        .warn-box.show { display: block; }
+        .format-tag {
+            display: inline-block; font-family: 'Source Sans 3', sans-serif; font-size: 11px; font-weight: 700;
+            background: var(--amber-soft); color: var(--gold-deep); padding: 2px 8px; border-radius: 999px;
+            letter-spacing: .01em; margin-left: 8px; vertical-align: middle; white-space: nowrap; border: 1px solid var(--gold-soft);
+        }
+        .reset-button { margin-top: 12px; }
+        .top-button {
+            position: fixed; right: 22px; bottom: 22px; z-index: 1000;
+            width: auto; padding: 11px 16px; border-radius: 999px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="masthead">
+                <h1>Generatore Accrediti — Scheda Valori</h1>
+        <div class="rule"></div>
+    </div>
+    <div class="info-box">
+        Questo strumento lavora esclusivamente sulla <strong>Scheda Valori</strong> del PG (Punti, Sapienze/Piano di Studi, Bagaglio, Conoscenze).
+        La Scheda Biografica non è coinvolta in nessun modo: non va incollata qui e non viene mai modificata da questo strumento.
+    </div>
+
+    <div class="panel">
+        <h2><span class="step-num">1</span>Selezione PG &amp; Parametri Sociali/Economiche</h2>
+        <div class="radio-group">
+            <label style="display:inline; margin-right:20px; color:#2d3748;">Tipo di Personaggio:</label>
+            <input type="radio" id="pgStudente" name="tipoPg" value="studente"> <label for="pgStudente" style="display:inline; font-weight:normal; margin-right:20px;">Studente</label>
+            <input type="radio" id="pgAdulto" name="tipoPg" value="adulto" checked=""> <label for="pgAdulto" style="display:inline; font-weight:normal;">Adulto</label>
+        </div>
+
+        <label for="inputComplessivo">Box A — Elenco Variazioni (Punti/Galeoni/Casa) <span class="format-tag">una riga per voce</span></label>
+        <div class="guida-box">
+            <strong>FORMATO ESATTO RICHIESTO, una voce per riga:</strong><br>
+            <code>+N Nome Statistica</code> oppure <code>-N Nome Statistica</code> — segno, numero (usa la virgola per i decimali, es. <code>24,5</code>), uno spazio, il nome della statistica per esteso.<br><br>
+            <strong>Nomi statistica riconosciuti:</strong> Punti Post, Galeoni, Punti Casa, Dialettica, Popolarità, Stima Docenti, Bontà, Malvagità, Virtuoso, Sinistro, Prestigio, Acume, Empatia, Percezione, Potenza, Tecnica, Volontà, Destrezza, Fatica, Resistenza, Salute.<br>
+            Per il fondo separato destinato a Eventi/Role usa <code>+N Galeoni Extra</code> o <code>-N Galeoni Extra</code>: non viene confuso con i Galeoni normali in scheda.<br>
+            Una statistica assente dal nome esatto elencato sopra, o assente dalla Scheda Valori incollata in Box B, viene segnalata come non applicata invece di essere ignorata in silenzio.<br><br>
+            Esempio: <code>+24 Punti Post</code> ↵ <code>+40 Punti Casa</code> ↵ <code>-15 Galeoni</code> ↵ <code>-25 Galeoni Extra</code>
+        </div>
+        <textarea id="inputComplessivo" placeholder="+24 Punti Post&#10;+40 Punti Casa&#10;+15 Galeoni"></textarea>
+
+        <label for="inputScheda">Box B — Codice Scheda Valori Originale <span class="format-tag">HTML completo</span></label>
+        <div class="guida-box"><strong>COSA INSERIRE:</strong> Apri il messaggio della Scheda Valori del PG in modalità "Modifica", seleziona TUTTO il codice HTML (dall'apertura del primo <code>&lt;div&gt;</code> alla chiusura dell'ultimo), copialo e incollalo qui integralmente, senza tagli. Da questo unico blocco il tool legge e aggiorna Parametri Sociali/Magici/Fisici, Prestigio, Punti Post, Galeoni, fondo Galeoni Extra, Inventario, voti/materie o livelli di Sapienza. <strong>Non</strong> incollare qui la Scheda Biografica: non serve e non verrà toccata.</div>
+        <textarea id="inputScheda"></textarea>
+
+        <label for="inputComplessivoOriginale">Box C — Testo originale “Complessivo Accredito” <span class="format-tag">opzionale · controllo incrociato</span></label>
+        <div class="guida-box"><strong>COSA INSERIRE:</strong> Puoi incollare qui il solo blocco <code>COMPLESSIVO ACCREDITO</code> oppure anche l’intera Lista della Spesa: il generatore isola automaticamente il riepilogo finale e ignora bonus descrittivi di oggetti/Sapienze. Lo confronta con il Box A e, quando trova una differenza inequivocabile, usa il riepilogo finale come fonte prioritaria. Riconosce anche più statistiche sulla stessa riga e distingue formule come <code>-25 dei 100 extra, -450 di quelli in scheda</code>: il primo valore modifica il fondo extra, il secondo i Galeoni normali. Ogni discrepanza viene comunque segnalata nei risultati.</div>
+        <textarea id="inputComplessivoOriginale" style="min-height:110px" placeholder="COMPLESSIVO ACCREDITO&#10;Complessivo PP spesi e guadagnati: + 34,5 PP&#10;Complessivo Galeoni spesi e guadagnati: - 25 dei 100 extra, -450 di quelli in scheda&#10;Altri punti/altro guadagnati o persi: +2 Prestigio +1,5 Sinistro +0,5 Popolarità"></textarea>
+    </div>
+
+    <div class="panel">
+        <h2><span class="step-num">2</span>Modifiche Specifiche (Conoscenze del Piano di Studi, Sapienze e Inventario)</h2>
+        <div class="grid-2">
+            <div>
+                <label for="linkVoto">Box D — URL di richiesta miglioramento <span class="format-tag">solo voti Studenti · un link</span></label>
+                <div class="guida-box"><strong>COSA INSERIRE:</strong> Incolla il link (URL) del post in cui il giocatore ha chiesto la modifica, così com'è, senza tag <code>[URL]</code> attorno. Serve per creare il link "sbarrato" <code>&lt;del&gt;</code> richiesto dal regolamento sui <strong>voti degli Studenti (Box E)</strong>. Le Sapienze degli Adulti (Box F) non usano questo link: il livello viene aggiornato senza storico sbarrato.</div>
+                <input type="text" id="linkVoto" placeholder="es: ?t=80721630#entry682188505">
+
+                <label for="modMaterie">Box E — Voti nelle Conoscenze del Piano di Studi <span class="format-tag">solo Studenti · separato da virgole</span></label>
+                <div class="guida-box">
+                <strong>FORMATO ESATTO, voci separate da virgola:</strong><br>
+                Singola Conoscenza: <code>Nome Conoscenza: NuovoVoto</code><br>
+                Esempio: <code>Trasfigurazione Umana: O, Incantesimi: E</code><br><br>
+                Tutte le Conoscenze di una Materia: <code>TUTTE: Nome Materia: DaVoto &gt; AVoto</code> oppure, se il voto di partenza non è uniforme, <code>TUTTE: Nome Materia: AVoto</code><br>
+                Esempio: <code>TUTTE: Trasfigurazione: T &gt; D</code> (tutte passano da T a D) — oppure <code>TUTTE: Trasfigurazione: D</code> (tutte portate a D, qualsiasi fosse il voto precedente)<br><br>
+                I voti validi sono le sole lettere T · D · S · A · O · E.
+                </div>
+                <textarea id="modMaterie" style="min-height:90px" placeholder="Trasfigurazione Umana: O, Incantesimi: E"></textarea>
+            </div>
+            <div>
+                <label for="modSapienze">Box F — Livello Conoscenza delle Sapienze <span class="format-tag">solo Adulti · separato da virgole</span></label>
+                <div class="guida-box"><strong>FORMATO ESATTO, voci separate da virgola:</strong> <code>Nome Conoscenza: NuovoLivello</code> — il livello è il numero finale (di partenza + acquistato), non solo l'incremento.<br>Esempio: <code>Locomotor: 3, Amico Creature: 5</code></div>
+                <input type="text" id="modSapienze">
+
+                <label for="modInventario">Box G — Movimentazione Oggetti nel Bagaglio <span class="format-tag">una voce per riga</span></label>
+                <div class="guida-box">
+                <strong>FORMATO ESATTO, una voce per riga (non per virgola: i nomi oggetto possono contenerne una):</strong><br>
+                <code>Nome Oggetto: +2</code> o <code>Nome Oggetto: -1</code> — variazione di quantità su un oggetto già presente in scheda.<br>
+                <code>USI: Nome Oggetto: -1</code> — consuma 1 uso/post dell’oggetto. È accettato anche <code>+1</code>: in entrambi i casi il contatore degli usi consumati aumenta di 1.<br>
+                <code>NUOVO: Nome Oggetto [Quantità]</code> oppure <code>NUOVO: Nome Oggetto [Quantità]: Descrizione</code> — aggiunge l'oggetto se non esiste, oppure ne incrementa la quantità se esiste già. La descrizione è opzionale.
+                </div>
+                <textarea id="modInventario" style="min-height:110px" placeholder="Calderone Performante in Granito: +1&#10;NUOVO: Pozione Ridente [2]: creata da PG"></textarea>
+            </div>
+        </div>
+        <label for="inputPuntiCasaIniziali">Box H — Punti Casa attuali <span class="format-tag">un numero, opzionale</span></label>
+        <div class="guida-box"><strong>COSA INSERIRE:</strong> Il punteggio esatto della Casa PRIMA di aggiungere quelli del Box A (solo un numero, es. <code>1245</code>). Serve per generare il calcolo [X ➔ Y] nel registro; se lasciato vuoto, la riga Punti Casa non compare nel registro.</div>
+        <input type="number" id="inputPuntiCasaIniziali">
+    </div>
+
+    <button onclick="elaboraTerminale()">Genera risultati</button>
+    <button type="button" class="reset-button" onclick="resetGeneratore()">Nuovo accredito — cancella tutto</button>
+
+    <button type="button" class="top-button" onclick="tornaSu()" title="Torna all'inizio">↑ Torna su</button>
+
+    <div class="panel">
+        <h2><span class="step-num">3</span>Risultati Finali</h2>
+        <div id="ignorati_box" class="warn-box"></div>
+        <label for="outForum">Risultato per il Registro Accrediti (copia e incolla sul forum):</label>
+        <textarea id="outForum" class="output-box" readonly=""></textarea>
+
+        <label for="outScheda">Nuovo Codice Scheda Valori (Aggiornato — Punti, Sapienze/Studi, Bagaglio, Conoscenze):</label>
+        <textarea id="outScheda" class="output-box" readonly=""></textarea>
+    </div>
+</div>
+
+<script>
+function resetGeneratore() {
+  document.querySelectorAll('textarea, input[type="text"], input[type="number"], input[type="url"]').forEach(el => {
+    el.value = '';
+  });
+
+  const studente = document.getElementById('pgStudente');
+  const adulto = document.getElementById('pgAdulto');
+  if (studente) studente.checked = false;
+  if (adulto) adulto.checked = true;
+
+  const warnBox = document.getElementById('ignorati_box');
+  if (warnBox) {
+    warnBox.classList.remove('show');
+    warnBox.innerHTML = '';
+  }
+}
+
+function tornaSu() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function formatNumeroItaliano(num) {
+  const n = Number(num);
+  if (Number.isInteger(n)) return String(n);
+  return String(n).replace('.', ',');
+}
+function toNumber(val) {
+  if (val === undefined || val === null) return 0;
+  const raw = String(val).trim();
+
+  if (!raw || raw === '//' || raw === '-') return 0;
+
+  const cleaned = raw
+    .replace(/\*/g, '')
+    .replace(/\s+/g, '')
+    .replace(',', '.');
+
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : 0;
+}
+function escapeRx(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function normalizeText(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function splitEntries(raw) {
+  return String(raw || '')
+    .split(/\n|;|,(?=\s*[^,:]+:\s*)/)
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+function parseKeyValueList(raw) {
+  const out = [];
+  for (const entry of splitEntries(raw)) {
+    const mAll = entry.match(/^TUTTE\s*:\s*(.+?)\s*:\s*(.+)$/i);
+    if (mAll) {
+      out.push({
+        type: 'all',
+        materia: mAll[1].trim(),
+        pattern: mAll[2].trim()
+      });
+      continue;
+    }
+    const m = entry.match(/^(.+?)\s*:\s*(.+)$/);
+    if (m) out.push({ type: 'single', key: m[1].trim(), value: m[2].trim() });
+  }
+  return out;
+}
+
+const STAT_ALIASES = {
+  'Punti Post': ['punti post', 'pp'],
+  'Galeoni': ['galeoni', 'galeone'],
+  'Punti Casa': ['punti casa', 'punti serpeverde', 'punti grifondoro', 'punti tassorosso', 'punti corvonero'],
+  'Dialettica': ['dialettica'],
+  'Popolarità': ['popolarità', 'popolarita'],
+  'Stima Docenti': ['stima docenti', 'stima'],
+  'Bontà': ['bontà', 'bonta'],
+  'Malvagità': ['malvagità', 'malvagita'],
+  'Virtuoso': ['virtuoso'],
+  'Sinistro': ['sinistro'],
+  'Prestigio': ['prestigio'],
+  'Acume': ['acume'],
+  'Empatia': ['empatia'],
+  'Percezione': ['percezione'],
+  'Potenza': ['potenza'],
+  'Tecnica': ['tecnica'],
+  'Volontà': ['volontà', 'volonta'],
+  'Destrezza': ['destrezza'],
+  'Fatica': ['fatica'],
+  'Resistenza': ['resistenza'],
+  'Salute': ['salute']
+};
+
+function valoreConSegno(segno, valore) {
+  const n = Math.abs(toNumber(valore));
+  return segno === '-' ? -n : n;
+}
+
+function patternAliases(stat) {
+  return (STAT_ALIASES[stat] || [])
+    .slice()
+    .sort((a, b) => b.length - a.length)
+    .map(a => escapeRx(a).replace(/\s+/g, '\\s+'))
+    .join('|');
+}
+
+function estraiDeltaDaBoxA() {
+  const txt = document.getElementById('inputComplessivo').value || '';
+  const deltas = {};
+  for (const stat in STAT_ALIASES) deltas[stat] = 0;
+
+  // Ogni statistica viene cercata globalmente: in questo modo sono ammesse
+  // anche piu' variazioni sulla stessa riga e spazi tra segno e numero (+ 0,5).
+  for (const stat in STAT_ALIASES) {
+    const aliases = patternAliases(stat);
+    if (!aliases) continue;
+
+    const extraGuard = stat === 'Galeoni' ? '(?!\\s+Extra\\b)' : '';
+    const rx = new RegExp(
+      '([+-])\\s*(\\d+(?:[\\.,]\\d+)?)\\s*(?:' + aliases + ')' + extraGuard + '(?=\\s|$|[,;.)])',
+      'gi'
+    );
+
+    let m;
+    while ((m = rx.exec(txt)) !== null) {
+      deltas[stat] += valoreConSegno(m[1], m[2]);
+    }
+  }
+
+  return deltas;
+}
+
+function estraiDeltaGaleoniExtraDaBoxA() {
+  const txt = document.getElementById('inputComplessivo').value || '';
+  const rx = /([+-])\s*(\d+(?:[\.,]\d+)?)\s*(?:Galeoni\s+Extra|Extra\s+Galeoni)\b/gi;
+  let totale = 0;
+  let m;
+  while ((m = rx.exec(txt)) !== null) totale += valoreConSegno(m[1], m[2]);
+  return totale;
+}
+
+function estraiDatiDaComplessivoOriginale(raw) {
+  const testoCompleto = String(raw || '').replace(/\r/g, '');
+  const deltas = {};
+  const presenti = new Set();
+  for (const stat in STAT_ALIASES) deltas[stat] = 0;
+
+  // Il Box C puo' contenere anche l'intera lista della spesa. Per evitare falsi
+  // positivi (es. "+2 Tecnica" nella descrizione di un oggetto), leggiamo SOLO
+  // il blocco finale "COMPLESSIVO ACCREDITO", se presente.
+  let text = testoCompleto;
+  const marker = /COMPLESSIVO\s+ACCREDITO/i.exec(testoCompleto);
+  if (marker) {
+    text = testoCompleto.slice(marker.index);
+    // Se dopo il riepilogo esiste un altro separatore/sezione, fermiamoci li'.
+    const dopoTitolo = text.replace(/^.*?COMPLESSIVO\s+ACCREDITO[^\n]*\n?/i, '');
+    const stop = dopoTitolo.search(/\n\s*<hr\s*\/?\s*>|\n\s*\[size\s*=|\n\s*#{1,6}\s+/i);
+    text = stop >= 0 ? dopoTitolo.slice(0, stop) : dopoTitolo;
+  }
+
+  const righe = text.split(/\n+/).map(r => r.trim()).filter(Boolean);
+  const trovaRiga = rx => righe.find(r => rx.test(r)) || '';
+
+  function numeroConSegno(rawNum) {
+    const m = String(rawNum || '').match(/([+-])?\s*(\d+(?:[\.,]\d+)?)/);
+    if (!m) return null;
+    const n = toNumber(m[2]);
+    return m[1] === '-' ? -Math.abs(n) : Math.abs(n);
+  }
+
+  function estraiNettoDaRiga(riga, unitaRx) {
+    if (!riga) return null;
+    // Se c'e' un "=", il primo importo immediatamente successivo e' il netto
+    // dichiarato nel riepilogo (es. "+9.5 PP, -15 PP = -5.5 PP").
+    const eq = riga.match(new RegExp('=\\s*([+-]?\\s*\\d+(?:[\\.,]\\d+)?)\\s*(?:' + unitaRx + ')\\b', 'i'));
+    if (eq) return numeroConSegno(eq[1]);
+
+    // Altrimenti usa l'importo esplicito della riga, senza sommare i numeri che
+    // possono comparire nei calcoli tra parentesi quadre.
+    const dopoDuePunti = riga.includes(':') ? riga.slice(riga.indexOf(':') + 1) : riga;
+    const primo = dopoDuePunti.match(new RegExp('([+-]?\\s*\\d+(?:[\\.,]\\d+)?)\\s*(?:' + unitaRx + ')\\b', 'i'));
+    return primo ? numeroConSegno(primo[1]) : null;
+  }
+
+  // Punti Post: leggiamo esclusivamente la riga del complessivo PP.
+  const rigaPP = trovaRiga(/Complessivo\s+PP\s+spesi\s+e\s+guadagnati\s*:/i);
+  const nettoPP = estraiNettoDaRiga(rigaPP, 'PP|Punti\\s+Post');
+  if (nettoPP !== null) {
+    deltas['Punti Post'] = nettoPP;
+    presenti.add('Punti Post');
+  }
+
+  // Galeoni: supporta sia il netto normale ("-500 G = -500 G") sia la forma
+  // separata "-25 dei 100 extra, -450 di quelli in scheda".
+  const rigaG = trovaRiga(/Complessivo\s+Galeoni\s+spesi\s+e\s+guadagnati\s*:/i);
+  let extraGaleoni = 0;
+  let extraPresente = false;
+  let baseExtraRiferita = null;
+
+  if (rigaG) {
+    const mExtra = rigaG.match(/([+-])\s*(\d+(?:[\.,]\d+)?)\s*(?:(?:dei|di|delle)\s+)?(\d+(?:[\.,]\d+)?)?\s*extra\b/i);
+    if (mExtra) {
+      extraGaleoni = valoreConSegno(mExtra[1], mExtra[2]);
+      extraPresente = true;
+      if (mExtra[3] !== undefined) baseExtraRiferita = toNumber(mExtra[3]);
+    }
+
+    const mBaseExtra = rigaG.match(/(?:dei|di|delle)\s+(\d+(?:[\.,]\d+)?)\s+extra\b/i);
+    if (mBaseExtra) baseExtraRiferita = toNumber(mBaseExtra[1]);
+
+    const mScheda = rigaG.match(/([+-])\s*(\d+(?:[\.,]\d+)?)\s+(?:di\s+)?(?:quelli|quelle)\s+in\s+scheda\b/i);
+    if (mScheda) {
+      deltas['Galeoni'] = valoreConSegno(mScheda[1], mScheda[2]);
+      presenti.add('Galeoni');
+    } else {
+      const nettoG = estraiNettoDaRiga(rigaG, 'G|Galeoni?');
+      if (nettoG !== null) {
+        deltas['Galeoni'] = nettoG;
+        presenti.add('Galeoni');
+      }
+    }
+  }
+
+  // Punti Casa, se presenti nel riepilogo finale.
+  const rigaCasa = trovaRiga(/Complessivo\s+Punti\s+Casa\b/i);
+  const nettoCasa = estraiNettoDaRiga(rigaCasa, 'Punti\\s+Casa');
+  if (nettoCasa !== null) {
+    deltas['Punti Casa'] = nettoCasa;
+    presenti.add('Punti Casa');
+  }
+
+  // Le altre statistiche vengono lette SOLO dalla riga "Altri punti/altro".
+  // Cosi' bonus descrittivi di oggetti, pozioni, Sapienze ecc. non diventano
+  // variazioni permanenti della Scheda Valori.
+  const rigaAltri = trovaRiga(/Altri\s+punti\s*\/\s*altro\s+guadagnati\s+o\s+persi\s*:/i);
+  if (rigaAltri) {
+    for (const stat in STAT_ALIASES) {
+      if (['Punti Post', 'Galeoni', 'Punti Casa'].includes(stat)) continue;
+      const aliases = patternAliases(stat);
+      if (!aliases) continue;
+      const rx = new RegExp('([+-])\\s*(\\d+(?:[\\.,]\\d+)?)\\s*(?:' + aliases + ')(?=\\s|$|[,;.)])', 'gi');
+      let m;
+      while ((m = rx.exec(rigaAltri)) !== null) {
+        deltas[stat] += valoreConSegno(m[1], m[2]);
+        presenti.add(stat);
+      }
+    }
+  }
+
+  return { deltas, presenti, extraGaleoni, extraPresente, baseExtraRiferita };
+}
+function riconciliaVariazioniConOriginale(deltasBoxA, extraBoxA, rawOriginale) {
+  const deltas = { ...deltasBoxA };
+  let extraGaleoni = extraBoxA || 0;
+  const correzioni = [];
+  const originale = estraiDatiDaComplessivoOriginale(rawOriginale);
+
+  originale.presenti.forEach(stat => {
+    const daBox = deltas[stat] || 0;
+    const daOriginale = originale.deltas[stat] || 0;
+    if (Math.abs(daBox - daOriginale) > 1e-9) {
+      correzioni.push(
+        `${stat}: Box A ${daBox === 0 ? 'assente/0' : formatNumeroItaliano(daBox)}, ` +
+        `testo originale ${formatNumeroItaliano(daOriginale)} — usato il testo originale.`
+      );
+    }
+    deltas[stat] = daOriginale;
+  });
+
+  if (originale.extraPresente) {
+    if (Math.abs(extraGaleoni - originale.extraGaleoni) > 1e-9) {
+      correzioni.push(
+        `Galeoni Extra: Box A ${extraGaleoni === 0 ? 'assente/0' : formatNumeroItaliano(extraGaleoni)}, ` +
+        `testo originale ${formatNumeroItaliano(originale.extraGaleoni)} — usato il testo originale.`
+      );
+    }
+    extraGaleoni = originale.extraGaleoni;
+  }
+
+  return { deltas, extraGaleoni, correzioni, originale };
+}
+
+function estraiValoriInizialiScheda(html) {
+  const iniziali = {};
+  const markers = {};
+  const source = String(html || '');
+
+  function registra(label, raw) {
+    const testo = String(raw ?? '').trim();
+    iniziali[label] = toNumber(testo);
+    markers[label] = {
+      star: /\*/.test(testo),
+      slash: testo === '//' || testo === ''
+    };
+  }
+
+  // Prima lettura: DOMParser. E' molto piu' robusto del vecchio isolamento con
+  // regex dei <div>, soprattutto quando la scheda contiene div annidati.
+  try {
+    const doc = new DOMParser().parseFromString(source, 'text/html');
+
+    ['sociali', 'magici', 'fisici'].forEach(divClass => {
+      const blocco = doc.querySelector('.' + divClass);
+      if (!blocco) return;
+      const rows = [...blocco.querySelectorAll('tr')];
+
+      rows.forEach((row, idx) => {
+        if (!row.classList.contains('nomi')) return;
+        let valoriRow = null;
+        for (let j = idx + 1; j < rows.length; j++) {
+          if (rows[j].classList.contains('valori')) { valoriRow = rows[j]; break; }
+          if (rows[j].classList.contains('nomi')) break;
+        }
+        if (!valoriRow) return;
+
+        const headers = [...row.children].filter(el => /^(TD|TH)$/i.test(el.tagName));
+        const values = [...valoriRow.children].filter(el => /^(TD|TH)$/i.test(el.tagName));
+        headers.forEach((cell, i) => {
+          const label = cell.textContent.replace(/\s+/g, ' ').trim();
+          if (!label || /^Prestigio\b/i.test(label)) return;
+          if (!values[i]) return;
+          registra(label, values[i].textContent);
+        });
+      });
+    });
+
+    const prestigio = doc.querySelector('.sociali .prestigio, .prestigio');
+    if (prestigio) registra('Prestigio', prestigio.textContent);
+  } catch (e) {
+    // Il fallback regex qui sotto copre browser molto vecchi o HTML anomalo.
+  }
+
+  // Punti Post e Galeoni sono righe testuali del Bagaglio, non celle di tabella.
+  // Regex tollerante ad attributi del <b>, spazi e segnaposto.
+  let m = source.match(/<b[^>]*>\s*Punti\s+Post\s*:\s*<\/b>\s*([^<\n\r]*)/i);
+  if (m) registra('Punti Post', m[1]);
+
+  m = source.match(/<b[^>]*>\s*Galeoni\s*:\s*<\/b>\s*([^<\n\r]*)/i);
+  if (m) registra('Galeoni', m[1]);
+
+  // Fallback regex per le tabelle nel caso DOMParser non abbia prodotto dati.
+  ['sociali', 'magici', 'fisici'].forEach(divClass => {
+    const chiaviAttese = {
+      sociali: ['Dialettica','Popolarità','Stima Docenti','Bontà','Malvagità','Virtuoso','Sinistro'],
+      magici: ['Acume','Empatia','Percezione','Potenza','Tecnica','Volontà'],
+      fisici: ['Destrezza','Fatica','Resistenza','Salute']
+    }[divClass];
+    if (chiaviAttese.every(k => Object.prototype.hasOwnProperty.call(iniziali, k) || !source.toLowerCase().includes(k.toLowerCase()))) return;
+
+    const block = source.match(new RegExp('<div class="' + divClass + '">([\\s\\S]*?)<\\/div>', 'i'));
+    if (!block) return;
+    const headersMatch = block[1].match(/<tr[^>]*class=["']nomi["'][^>]*>([\s\S]*?)<\/tr>/i);
+    const valuesMatch = block[1].match(/<tr[^>]*class=["']valori["'][^>]*>([\s\S]*?)<\/tr>/i);
+    if (!headersMatch || !valuesMatch) return;
+
+    const headers = [...headersMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)]
+      .map(x => x[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+    const valueCells = [...valuesMatch[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
+    headers.forEach((h, i) => {
+      if (!h || Object.prototype.hasOwnProperty.call(iniziali, h) || !valueCells[i]) return;
+      registra(h, valueCells[i][1].replace(/<[^>]+>/g, '').trim());
+    });
+  });
+
+  if (!Object.prototype.hasOwnProperty.call(iniziali, 'Prestigio')) {
+    m = source.match(/<div[^>]*class=["']prestigio["'][^>]*>\s*([^<]+)\s*<\/div>/i);
+    if (m) registra('Prestigio', m[1]);
+  }
+
+  return { iniziali, markers };
+}
+function renderStatValue(label, value, markers) {
+  const base = formatNumeroItaliano(value);
+  if (markers && markers[label] && markers[label].star) return base + '*';
+  return base;
+}
+
+function aggiornaTabella(html, divClass, finali, markers, deltas) {
+  const rx = new RegExp(
+    '(<div class="' + divClass + '">[\\s\\S]*?<tr class="nomi">)([\\s\\S]*?)(<\\/tr>[\\s\\S]*?<tr class="valori">)([\\s\\S]*?)(<\\/tr>[\\s\\S]*?<\\/div>)',
+    'i'
+  );
+  return html.replace(
+    rx,
+    function(_, p1, headersHtml, p3, valuesHtml, p5) {
+      const headers = [...headersHtml.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)]
+        .map(x => x[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
+
+      const valueCells = [...valuesHtml.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/gi)];
+      let rebuilt = '';
+
+      valueCells.forEach((cell, idx) => {
+        const attrs = cell[1];
+        const label = headers[idx] || '';
+        const originalRaw = cell[2].replace(/<[^>]+>/g, '').trim();
+
+        // Riscriviamo la cella SOLO se questa specifica statistica e' stata
+        // toccata da un delta diverso da zero: qualunque altro valore (incluso
+        // il segnaposto "//" per statistiche non ancora sbloccate) resta invariato.
+        let finalVal = originalRaw;
+        const toccata = deltas && Object.prototype.hasOwnProperty.call(deltas, label) && deltas[label] !== 0;
+        if (toccata && Object.prototype.hasOwnProperty.call(finali, label)) {
+          finalVal = renderStatValue(label, finali[label], markers);
+        }
+
+        rebuilt += `<td${attrs}>${finalVal}</td>`;
+      });
+
+      return p1 + headersHtml + p3 + rebuilt + p5;
+    }
+  );
+}
+
+function aggiornaSchedaConValori(html, data, deltas) {
+  let out = html;
+  const iniziali = { ...(data.iniziali || {}) };
+  const markers = { ...(data.markers || {}) };
+  const finali = { ...iniziali };
+  const ignorati = [];
+
+  Object.keys(deltas || {}).forEach(stat => {
+    const delta = deltas[stat] || 0;
+    if (delta === 0) return;
+    if (Object.prototype.hasOwnProperty.call(iniziali, stat)) {
+      finali[stat] = (iniziali[stat] || 0) + delta;
+    } else {
+      // La statistica non esiste in QUESTA scheda (es. "Prestigio" su una Scheda
+      // Valori Studente, o un refuso nel nome): il delta non verrà scritto da
+      // nessuna parte, quindi non deve nemmeno comparire nel registro come se
+      // fosse stato applicato.
+      ignorati.push(stat);
+    }
+  });
+
+  if ((deltas['Punti Post'] || 0) !== 0 && Object.prototype.hasOwnProperty.call(finali, 'Punti Post')) {
+    const rendered = renderStatValue('Punti Post', finali['Punti Post'], markers);
+    out = out.replace(
+      /(<b[^>]*>\s*Punti\s+Post\s*:\s*<\/b>\s*)([^<\n\r]*)/i,
+      `$1${rendered}`
+    );
+  }
+
+  if ((deltas['Galeoni'] || 0) !== 0 && Object.prototype.hasOwnProperty.call(finali, 'Galeoni')) {
+    const rendered = renderStatValue('Galeoni', finali['Galeoni'], markers);
+    out = out.replace(
+      /(<b[^>]*>\s*Galeoni\s*:\s*<\/b>\s*)([^<\n\r]*)/i,
+      `$1${rendered}`
+    );
+  }
+
+  // --- Debito (Punti Post / Galeoni): resta un valore FISSO finche' il totale
+  // accumulato di quella risorsa non lo raggiunge o supera — non si riduce mano
+  // a mano che si guadagna. Al raggiungimento/superamento, il debito si azzera
+  // e l'eccedenza (accumulato - debito) diventa il nuovo saldo disponibile.
+  function gestisciDebito(nomeCampo, unita) {
+    const rxDebito = new RegExp('(<b>\\s*Debito \\(' + escapeRx(nomeCampo) + '\\):\\s*<\\/b>\\s*)(-?[\\d.,]+)(\\s*' + escapeRx(unita) + ')', 'i');
+    const mDebito = out.match(rxDebito);
+    if (!mDebito) return;
+    if (!Object.prototype.hasOwnProperty.call(finali, nomeCampo)) return;
+
+    const debitoAttuale = Math.abs(toNumber(mDebito[2]));
+    if (debitoAttuale <= 0) return;
+    if (finali[nomeCampo] < debitoAttuale) return; // non ancora raggiunto: il debito resta invariato
+
+    const eccedenza = finali[nomeCampo] - debitoAttuale;
+    finali[nomeCampo] = eccedenza;
+
+    const rxCampo = new RegExp('(<b>\\s*' + escapeRx(nomeCampo) + ':\\s*<\\/b>\\s*)([^<\\n\\r]*)', 'i');
+    out = out.replace(rxCampo, `$1${renderStatValue(nomeCampo, eccedenza, markers)}`);
+
+    // il debito e' estinto: cancello l'intera riga (icona compresa), non solo il valore
+    const rxRigaCompleta = new RegExp(
+      '[ \\t]*<i[^>]*>\\s*<\\/i>\\s*<b>\\s*Debito \\(' + escapeRx(nomeCampo) + '\\):\\s*<\\/b>\\s*-?[\\d.,]+\\s*' + escapeRx(unita) + '\\s*\\r?\\n?',
+      'i'
+    );
+    out = out.replace(rxRigaCompleta, '');
+  }
+  gestisciDebito('Punti Post', 'PP');
+  gestisciDebito('Galeoni', 'G');
+
+  out = aggiornaTabella(out, 'sociali', finali, markers, deltas);
+  out = aggiornaTabella(out, 'magici', finali, markers, deltas);
+  out = aggiornaTabella(out, 'fisici', finali, markers, deltas);
+
+  if ((deltas['Prestigio'] || 0) !== 0 && Object.prototype.hasOwnProperty.call(finali, 'Prestigio')) {
+    const prestigioFinale = finali['Prestigio'];
+    const renderedPrestigio = renderStatValue('Prestigio', prestigioFinale, markers);
+    const widthPrestigio = formatNumeroItaliano(prestigioFinale) + '%';
+
+    out = out.replace(
+      /(<tr\s+class="nomi">[\s\S]*?<td[^>]*colspan="4"[^>]*>[\s\S]*?Prestigio[\s\S]*?<\/td>\s*<\/tr>\s*<tr\s+class="valori">[\s\S]*?<td[^>]*colspan="4"[^>]*>\s*<div\s+class="contpunti">\s*<div\s+class="max"[^>]*style=")([^"]*)(")(><\/div>\s*<div\s+class="prestigio"[^>]*style=")([^"]*)(")(>)([\s\S]*?)(<\/div>\s*<\/div>\s*<\/td>\s*<\/tr>)/i,
+      function(_, p1, maxStyle, p3, p4, prestigioStyle, p6, p7, oldValue, p9) {
+        const newMaxStyle = maxStyle.replace(/width\s*:\s*[^;"]+%?/i, '').trim();
+        const newPrestigioStyle = prestigioStyle.replace(/width\s*:\s*[^;"]+%?/i, '').trim();
+
+        const fixedMaxStyle = (newMaxStyle ? newMaxStyle.replace(/\s*;?\s*$/, '; ') : '') + `width:${widthPrestigio}`;
+        const fixedPrestigioStyle = (newPrestigioStyle ? newPrestigioStyle.replace(/\s*;?\s*$/, '; ') : '') + `width:${widthPrestigio}`;
+
+        return p1 + fixedMaxStyle + p3 + p4 + fixedPrestigioStyle + p6 + p7 + renderedPrestigio + p9;
+      }
+    );
+  }
+
+  return { html: out, finali, markers, ignorati };
+}
+
+function aggiornaGaleoniExtra(html, delta, baseRiferita) {
+  const risultato = {
+    html, delta: delta || 0, iniziale: null, inizialeScheda: null, finale: null,
+    baseDaTesto: baseRiferita !== null && baseRiferita !== undefined ? Number(baseRiferita) : null,
+    applicato: false, errore: null
+  };
+  if (!delta) return risultato;
+
+  const rx = /([+-]?\d+(?:[\.,]\d+)?)(\s+extra\s+da\s+spendere\b[^\n<]*)/i;
+  const m = html.match(rx);
+  if (!m) {
+    risultato.errore = 'Richiesta una variazione dei Galeoni Extra, ma nella Scheda Valori non è stata trovata la riga “extra da spendere”.';
+    return risultato;
+  }
+
+  const inizialeScheda = toNumber(m[1]);
+  const baseCalcolo = risultato.baseDaTesto !== null && Number.isFinite(risultato.baseDaTesto)
+    ? risultato.baseDaTesto
+    : inizialeScheda;
+  const finale = baseCalcolo + delta;
+
+  risultato.inizialeScheda = inizialeScheda;
+  risultato.iniziale = baseCalcolo;
+  risultato.finale = finale;
+
+  if (finale < 0) {
+    risultato.errore = `La variazione dei Galeoni Extra porterebbe il fondo sotto zero (${formatNumeroItaliano(baseCalcolo)} → ${formatNumeroItaliano(finale)}). Non è stata applicata.`;
+    return risultato;
+  }
+
+  risultato.html = html.replace(rx, `${formatNumeroItaliano(finale)}$2`);
+  risultato.applicato = true;
+  return risultato;
+}
+
+function splitEntriesInventario(raw) {
+  // Il Box G usa una voce per riga (o ";"). Le virgole possono fare parte
+  // del nome o della descrizione e quindi NON sono separatori.
+  return String(raw || '')
+    .split(/\n|;/)
+    .map(x => x.trim())
+    .filter(Boolean);
+}
+
+function parseInventarioMods(raw) {
+  const ops = [];
+
+  for (const entry of splitEntriesInventario(raw)) {
+    if (/^NUOVO\s*:/i.test(entry)) {
+      // Descrizione opzionale:
+      // NUOVO: Valigia Magica [1]
+      // NUOVO: Motocicletta Volante [1]: descrizione
+      const m = entry.match(/^NUOVO\s*:\s*(.+?)\s*\[(\d+)\](?:\s*:\s*(.*))?$/i);
+      if (m) {
+        ops.push({
+          type: 'new',
+          name: m[1].trim(),
+          qty: parseInt(m[2], 10) || 1,
+          desc: (m[3] || '').trim()
+        });
+      }
+      continue;
+    }
+
+    // Il nome può contenere ":" (es. "Quintessenza: una Missione").
+    let m = entry.match(/^USI\s*:\s*(.+)\s*:\s*([+-]?\d+)\s*$/i);
+    if (m) {
+      ops.push({
+        type: 'uses',
+        name: m[1].trim(),
+        delta: parseInt(m[2], 10) || 0
+      });
+      continue;
+    }
+
+    m = entry.match(/^(.+)\s*:\s*([+-]?\d+)\s*$/i);
+    if (m) {
+      ops.push({
+        type: 'qty',
+        name: m[1].trim(),
+        delta: parseInt(m[2], 10) || 0
+      });
+    }
+  }
+
+  return ops;
+}
+
+// -----------------------------------------------------------------------------
+// INVENTARIO: gestione conservativa
+// -----------------------------------------------------------------------------
+// Le Schede Valori possono contenere <details> annidati dentro "Oggetti"
+// (per esempio gruppi di Calderoni). Per questo NON bisogna mai estrarre il
+// contenuto con un regex "...*?</details>" e poi ricostruirlo: il primo
+// </details> potrebbe appartenere a un gruppo interno.
+//
+// Le funzioni seguenti:
+// 1) trovano la chiusura CORRISPONDENTE del <details> Oggetti/Pozioni contando
+//    correttamente i livelli annidati;
+// 2) modificano SOLO il frammento della voce interessata;
+// 3) non riscrivono, non ordinano e non normalizzano le altre righe.
+// -----------------------------------------------------------------------------
+
+function trovaSezioneInventario(html, etichetta) {
+  const target = normalizeText(etichetta);
+  const summaryRx = /<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>/gi;
+  let m = null;
+  let candidate;
+
+  // Cerchiamo un <details> il cui PROPRIO <summary> contenga esattamente
+  // "Oggetti:" oppure "Pozioni:". Non permettiamo al matcher di attraversare
+  // summary precedenti.
+  while ((candidate = summaryRx.exec(html))) {
+    const summaryText = testoVisibileInventario(candidate[1])
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (normalizeText(summaryText).includes(normalizeText(etichetta + ':'))) {
+      m = candidate;
+      break;
+    }
+  }
+
+  if (!m) return null;
+
+  const start = m.index;
+  const bodyStart = summaryRx.lastIndex;
+
+  const tokenRx = /<details\b[^>]*>|<\/details\s*>/gi;
+  tokenRx.lastIndex = start;
+
+  let depth = 0;
+  let closeStart = -1;
+  let end = -1;
+  let token;
+
+  while ((token = tokenRx.exec(html))) {
+    if (/^<details\b/i.test(token[0])) {
+      depth++;
+    } else {
+      depth--;
+      if (depth === 0) {
+        closeStart = token.index;
+        end = tokenRx.lastIndex;
+        break;
+      }
+    }
+  }
+
+  if (closeStart < 0) return null;
+
+  return {
+    etichetta,
+    start,
+    bodyStart,
+    bodyEnd: closeStart,
+    end,
+    body: html.slice(bodyStart, closeStart)
+  };
+}
+
+function sostituisciCorpoSezione(html, sezione, nuovoBody) {
+  return html.slice(0, sezione.bodyStart) + nuovoBody + html.slice(sezione.bodyEnd);
+}
+
+function testoVisibileInventario(raw) {
+  return String(raw || '')
+    // mantiene il testo visibile dei BBCode URL
+    .replace(/\[URL=[^\]]*\]([\s\S]*?)\[\/URL\]/gi, '$1')
+    .replace(/\[URL\]([\s\S]*?)\[\/URL\]/gi, '$1')
+    // elimina eventuali tag HTML interni
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function nomeDaBoldInventario(innerHtml) {
+  let s = testoVisibileInventario(innerHtml)
+    .replace(/^\s*-\s*/, '')
+    .trim();
+
+  // Quantità finale: "Nome [3]" oppure "Nome [3]:"
+  s = s.replace(/\s*\[\d+\]\s*:?\s*$/, '').trim();
+
+  // Oggetti senza quantità: "Borsellino della zia:"
+  s = s.replace(/:\s*$/, '').trim();
+
+  return s;
+}
+
+function dentroSummary(body, index) {
+  const open = body.lastIndexOf('<summary', index);
+  const close = body.lastIndexOf('</summary>', index);
+  return open > close;
+}
+
+function trovaVoceNelCorpo(body, nomeRichiesto) {
+  const target = normalizeText(nomeRichiesto);
+  const boldRx = /<b>([\s\S]*?)<\/b>/gi;
+  let m;
+
+  while ((m = boldRx.exec(body))) {
+    // Il <b> del <summary> di un gruppo (es. "Calderone ... [2]") non è
+    // una singola voce movimentabile: si cercano invece le righe al suo interno.
+    if (dentroSummary(body, m.index)) continue;
+
+    const nome = nomeDaBoldInventario(m[1]);
+    if (normalizeText(nome) !== target) continue;
+
+    const boldStart = m.index;
+    const boldEnd = boldRx.lastIndex;
+
+    const nextNewline = body.indexOf('\n', boldEnd);
+    const nextBold = body.indexOf('<b>', boldEnd);
+
+    let scopeEnd = body.length;
+    if (nextNewline >= 0) scopeEnd = Math.min(scopeEnd, nextNewline);
+    if (nextBold >= 0) scopeEnd = Math.min(scopeEnd, nextBold);
+
+    const qtyMatch = m[1].match(/\[(\d+)\](?![\s\S]*\[\d+\])/);
+    const qty = qtyMatch ? (parseInt(qtyMatch[1], 10) || 1) : 1;
+
+    return {
+      nome,
+      qty,
+      boldStart,
+      boldEnd,
+      scopeEnd,
+      boldFull: m[0],
+      boldInner: m[1]
+    };
+  }
+
+  return null;
+}
+
+function trovaVoceInventario(html, nome) {
+  for (const etichetta of ['Oggetti', 'Pozioni']) {
+    const sezione = trovaSezioneInventario(html, etichetta);
+    if (!sezione) continue;
+
+    const voce = trovaVoceNelCorpo(sezione.body, nome);
+    if (voce) return { sezione, voce };
+  }
+  return null;
+}
+
+function cambiaQuantitaNelBold(boldFull, nuovaQty) {
+  // Caso normale: la quantità [N] esiste già.
+  if (/\[\d+\]/.test(boldFull)) {
+    return boldFull.replace(/\[(\d+)\](?![\s\S]*\[\d+\])/, `[${nuovaQty}]`);
+  }
+
+  // Se la quantità originale era implicitamente 1 e resta 1, non tocchiamo
+  // neppure la formattazione.
+  if (nuovaQty === 1) return boldFull;
+
+  // Aggiunge [N] prima dei due punti finali, se presenti, senza normalizzare
+  // nient'altro nel <b>.
+  return boldFull.replace(/(\s*:?\s*)<\/b>$/i, function(_, finale) {
+    const haDuePunti = /:/.test(finale);
+    return ` [${nuovaQty}]${haDuePunti ? ':' : ''}</b>`;
+  });
+}
+
+function aggiornaContatoreVoce(body, voce, consumo) {
+  const tratto = body.slice(voce.boldEnd, voce.scopeEnd);
+
+  // Supporta anche note dopo l'unità:
+  // (2/3 usi - scadenza 24/02/2026)
+  const rx = /\((\d+)\s*\/\s*(\d+)\s*(us[oi]|post|role)\b([^)]*)\)/i;
+  const m = rx.exec(tratto);
+
+  // Fallback per contatori semplici come (0/1).
+  const fallback = !m ? /\((\d+)\s*\/\s*(\d+)\)/i.exec(tratto) : null;
+  const match = m || fallback;
+  if (!match) return { body, applicato: false };
+
+  const corrente = parseInt(match[1], 10) || 0;
+  const massimo = parseInt(match[2], 10) || 0;
+  const incremento = Math.abs(parseInt(consumo, 10) || 0);
+  const nuovo = massimo > 0
+    ? Math.min(massimo, corrente + incremento)
+    : corrente + incremento;
+
+  const sostituito = match[0].replace(
+    /^(\()\d+/,
+    `$1${nuovo}`
+  );
+
+  const nuovoTratto =
+    tratto.slice(0, match.index) +
+    sostituito +
+    tratto.slice(match.index + match[0].length);
+
+  const nuovoBody =
+    body.slice(0, voce.boldEnd) +
+    nuovoTratto +
+    body.slice(voce.scopeEnd);
+
+  return { body: nuovoBody, applicato: true };
+}
+
+function rimuoviSoloVoce(body, voce) {
+  // Parte iniziale della riga. Se la voce è il primo elemento di un <details>
+  // annidato può essere preceduta da "... </summary> - <b>": in quel caso
+  // eliminiamo dal trattino della voce, NON dal <summary>.
+  const lineStartRaw = body.lastIndexOf('\n', voce.boldStart);
+  const lineStart = lineStartRaw < 0 ? 0 : lineStartRaw + 1;
+  const prefisso = body.slice(lineStart, voce.boldStart);
+
+  let removeStart = voce.boldStart;
+  const lastDash = prefisso.lastIndexOf('-');
+  if (lastDash >= 0 && /^\s*$/.test(prefisso.slice(lastDash + 1))) {
+    removeStart = lineStart + lastDash;
+  }
+
+  const tratto = body.slice(voce.boldEnd, voce.scopeEnd);
+
+  // Non cancellare mai tag strutturali che possono seguire la voce sulla stessa
+  // riga: </details>, <details>, <summary>...
+  const struttura = /<\/?details\b|<\/?summary\b/i.exec(tratto);
+  let removeEnd = struttura
+    ? voce.boldEnd + struttura.index
+    : voce.scopeEnd;
+
+  // Per una normale riga autonoma possiamo eliminare anche il newline.
+  if (!struttura && removeStart === lineStart && body[removeEnd] === '\n') {
+    removeEnd++;
+  }
+
+  return body.slice(0, removeStart) + body.slice(removeEnd);
+}
+
+function cambiaQuantitaVoce(body, voce, delta) {
+  const nuovaQty = Math.max(0, (voce.qty || 1) + delta);
+
+  if (nuovaQty === 0) {
+    return { body: rimuoviSoloVoce(body, voce), nuovaQty, applicato: true };
+  }
+
+  const nuovoBold = cambiaQuantitaNelBold(voce.boldFull, nuovaQty);
+  const nuovoBody =
+    body.slice(0, voce.boldStart) +
+    nuovoBold +
+    body.slice(voce.boldEnd);
+
+  return { body: nuovoBody, nuovaQty, applicato: true };
+}
+
+function trovaAncoreTopLevel(body) {
+  const anchors = [];
+  const tokenRx = /<details\b[^>]*>|<\/details\s*>|<b>([\s\S]*?)<\/b>/gi;
+
+  let depth = 0;
+  let nestedStart = null;
+  let m;
+
+  while ((m = tokenRx.exec(body))) {
+    const token = m[0];
+
+    if (/^<details\b/i.test(token)) {
+      if (depth === 0) nestedStart = m.index;
+      depth++;
+      continue;
+    }
+
+    if (/^<\/details/i.test(token)) {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) nestedStart = null;
+      continue;
+    }
+
+    // <b> fuori dai details annidati = normale voce top-level.
+    if (depth === 0) {
+      const nome = nomeDaBoldInventario(m[1]);
+      if (!nome) continue;
+
+      const lineStartRaw = body.lastIndexOf('\n', m.index);
+      const lineStart = lineStartRaw < 0 ? 0 : lineStartRaw + 1;
+      const prefisso = body.slice(lineStart, m.index);
+      const lastDash = prefisso.lastIndexOf('-');
+      const start = lastDash >= 0 && /^\s*$/.test(prefisso.slice(lastDash + 1))
+        ? lineStart + lastDash
+        : m.index;
+
+      anchors.push({ name: nome, start });
+      continue;
+    }
+
+    // Il primo <b> dentro il <summary> di un details annidato rappresenta
+    // l'intero gruppo come unità top-level per il solo posizionamento dei NUOVO.
+    if (depth === 1 && nestedStart !== null && dentroSummary(body, m.index)) {
+      const gia = anchors.some(a => a.start === nestedStart);
+      if (!gia) {
+        const nome = nomeDaBoldInventario(m[1]);
+        if (nome) anchors.push({ name: nome, start: nestedStart });
+      }
+    }
+  }
+
+  return anchors.sort((a, b) => a.start - b.start);
+}
+
+function inserisciNuovaVoceInOggetti(body, op) {
+  const nuovaRiga =
+    `- <b>${op.name} [${op.qty}]:</b>` +
+    (op.desc ? ` ${op.desc}` : '');
+
+  const anchors = trovaAncoreTopLevel(body);
+  const nomeNuovo = normalizeText(op.name);
+
+  let insertAt = body.length;
+
+  // Non riordiniamo mai ciò che già esiste. Cerchiamo soltanto il primo
+  // elemento che alfabeticamente viene dopo la nuova voce.
+  for (const a of anchors) {
+    if (normalizeText(a.name).localeCompare(nomeNuovo, 'it') > 0) {
+      insertAt = a.start;
+      break;
+    }
+  }
+
+  let before = body.slice(0, insertAt);
+  let after = body.slice(insertAt);
+
+  if (before && !before.endsWith('\n')) before += '\n';
+  const suffisso = after && !after.startsWith('\n') ? '\n' : '';
+
+  return before + nuovaRiga + suffisso + after;
+}
+
+function aggiornaBagaglio(html, modInventarioRaw, esito) {
+  const ops = parseInventarioMods(modInventarioRaw);
+  if (!ops.length) return html;
+
+  const stato = esito || { ignorate: [] };
+  stato.ignorate = stato.ignorate || [];
+
+  let out = html;
+
+  for (const op of ops) {
+    let trovato = trovaVoceInventario(out, op.name);
+
+    if (op.type === 'new') {
+      if (trovato) {
+        // Se esiste già, cambia SOLO la quantità. La descrizione già presente
+        // viene preservata: un acquisto non deve riscrivere la voce storica.
+        const result = cambiaQuantitaVoce(
+          trovato.sezione.body,
+          trovato.voce,
+          op.qty
+        );
+        out = sostituisciCorpoSezione(out, trovato.sezione, result.body);
+        continue;
+      }
+
+      const sezioneOggetti = trovaSezioneInventario(out, 'Oggetti');
+      if (!sezioneOggetti) {
+        stato.ignorate.push(`${op.name} (sezione Oggetti non trovata per la nuova voce)`);
+        continue;
+      }
+
+      const nuovoBody = inserisciNuovaVoceInOggetti(sezioneOggetti.body, op);
+      out = sostituisciCorpoSezione(out, sezioneOggetti, nuovoBody);
+      continue;
+    }
+
+    if (!trovato) {
+      stato.ignorate.push(`${op.name} (voce non trovata in Oggetti o Pozioni)`);
+      continue;
+    }
+
+    if (op.type === 'qty') {
+      const result = cambiaQuantitaVoce(
+        trovato.sezione.body,
+        trovato.voce,
+        op.delta
+      );
+      out = sostituisciCorpoSezione(out, trovato.sezione, result.body);
+      continue;
+    }
+
+    if (op.type === 'uses') {
+      const result = aggiornaContatoreVoce(
+        trovato.sezione.body,
+        trovato.voce,
+        op.delta
+      );
+
+      if (!result.applicato) {
+        stato.ignorate.push(`${op.name} (contatore usi/post/role non trovato)`);
+        continue;
+      }
+
+      out = sostituisciCorpoSezione(out, trovato.sezione, result.body);
+    }
+  }
+
+  return out;
+}
+
+function costruisciRegistro(iniziali, finali, deltaCasa, puntiCasaIniziali, extraInfo) {
+  const lines = [];
+  const mk = (label, short, key) => {
+    const v0 = iniziali[key] || 0;
+    const vf = finali[key] || 0;
+    const d = vf - v0;
+    if (d === 0) return null;
+    return `<b>${label}</b> [color=${d >= 0 ? 'green' : 'red'}]${d >= 0 ? '+' : ''}${formatNumeroItaliano(d)} ${short}[/color] [${formatNumeroItaliano(v0)} ➔ ${formatNumeroItaliano(vf)}]`;
+  };
+
+  lines.push(mk('Complessivo PP spesi e guadagnati:', 'PP', 'Punti Post') || '<b>Complessivo PP spesi e guadagnati:</b> //');
+
+  let rigaGaleoni = mk('Complessivo Galeoni spesi e guadagnati:', 'G', 'Galeoni');
+  if (extraInfo && extraInfo.applicato && extraInfo.delta) {
+    const d = extraInfo.delta;
+    const extraTxt = `[color=${d >= 0 ? 'green' : 'red'}]${d >= 0 ? '+' : ''}${formatNumeroItaliano(d)} G extra[/color] [${formatNumeroItaliano(extraInfo.iniziale)} ➔ ${formatNumeroItaliano(extraInfo.finale)}]`;
+    rigaGaleoni = rigaGaleoni ? `${rigaGaleoni}; ${extraTxt}` : `<b>Complessivo Galeoni spesi e guadagnati:</b> ${extraTxt}`;
+  }
+  lines.push(rigaGaleoni || '<b>Complessivo Galeoni spesi e guadagnati:</b> //');
+
+  const boxHPuntiCasaCompilato =
+    String(document.getElementById('inputPuntiCasaIniziali').value || '').trim() !== '';
+
+  if (boxHPuntiCasaCompilato) {
+    const vf = puntiCasaIniziali + deltaCasa;
+    if (deltaCasa) {
+      lines.push(`<b>Complessivo Punti Casa spesi e persi:</b> [color=${deltaCasa >= 0 ? 'green' : 'red'}]${deltaCasa >= 0 ? '+' : ''}${formatNumeroItaliano(deltaCasa)} Punti Casa[/color] [${formatNumeroItaliano(puntiCasaIniziali)} ➔ ${formatNumeroItaliano(vf)}]`);
+    } else {
+      lines.push(`<b>Complessivo Punti Casa spesi e persi:</b> [color=green]+0 Punti Casa[/color] [${formatNumeroItaliano(puntiCasaIniziali)} ➔ ${formatNumeroItaliano(vf)}]`);
+    }
+  }
+
+  const altri = [];
+  ['Dialettica','Popolarità','Stima Docenti','Bontà','Malvagità','Virtuoso','Sinistro','Prestigio',
+   'Acume','Empatia','Percezione','Potenza','Tecnica','Volontà','Destrezza','Fatica','Resistenza','Salute'].forEach(key => {
+    const v0 = iniziali[key] || 0;
+    const vf = finali[key] || 0;
+    const d = vf - v0;
+    if (d !== 0) altri.push(`[color=${d >= 0 ? 'green' : 'red'}]${d >= 0 ? '+' : ''}${formatNumeroItaliano(d)} ${key}[/color] [${formatNumeroItaliano(v0)} ➔ ${formatNumeroItaliano(vf)}]`);
+  });
+  lines.push(`<b>Altri punti/altro guadagnati o persi:</b> ${altri.length ? altri.join(', ') : '//'}`);
+  return lines.join('\n');
+}
+
+function aggiornaVotoConLink(cellaHtml, nuovoVoto, linkVoto) {
+  const clean = cellaHtml.replace(/\s+/g, ' ').trim();
+
+  // Caso generale: zero o piu' blocchi <del>...</del> gia' presenti (storico di
+  // voti precedenti), seguiti dal voto attualmente in vigore (lettere semplici).
+  // Vanno SEMPRE preservati TUTTI i <del> gia' presenti, aggiungendone uno nuovo
+  // solo per il voto che stiamo appena superando — mai sovrascrivere lo storico.
+  const mStorico = clean.match(/^((?:<del>[\s\S]*?<\/del>\s*)*)([A-Z]+)\s*$/i);
+  if (mStorico) {
+    const storicoEsistente = mStorico[1];
+    const vecchioAttuale = mStorico[2];
+    const nuovoDel = linkVoto
+      ? `<del>[URL=${linkVoto}]${vecchioAttuale}[/URL]</del> `
+      : `<del>${vecchioAttuale}</del> `;
+    return storicoEsistente + nuovoDel + nuovoVoto;
+  }
+
+  // Fallback di sicurezza: la cella non segue il formato atteso (storico + voto
+  // semplice) — proviamo comunque a barrare solo le ultime lettere trovate,
+  // senza toccare il resto del contenuto della cella.
+  const mUltimo = clean.match(/([A-Z]+)\s*$/i);
+  if (mUltimo) {
+    const vecchio = mUltimo[1];
+    const replacement = linkVoto
+      ? `<del>[URL=${linkVoto}]${vecchio}[/URL]</del> ${nuovoVoto}`
+      : `<del>${vecchio}</del> ${nuovoVoto}`;
+    return clean.replace(/([A-Z]+)\s*$/i, replacement);
+  }
+
+  return clean;
+}
+
+function estraiPatternVoto(pattern) {
+  const m = pattern.trim().match(/^([A-Z])\s*>\s*([A-Z])$/i);
+  if (m) return { from: m[1].toUpperCase(), to: m[2].toUpperCase() };
+  return { from: null, to: pattern.trim().toUpperCase() };
+}
+
+function aggiornaTutteConoscenzeMateria(html, materia, pattern, linkVoto) {
+  const matRx = escapeRx(materia).replace(/\s+/g, '\\s+');
+  const { from, to } = estraiPatternVoto(pattern);
+  let out = html;
+
+  const reMateria = new RegExp(
+    '(<details[^>]*>\\s*<summary[^>]*>[\\s\\S]*?<b>\\s*' + matRx + '\\s*<\\/b>[\\s\\S]*?<\\/summary>)([\\s\\S]*?)(<\\/details>)',
+    'i'
+  );
+
+  out = out.replace(reMateria, function(_, start, inner, end) {
+    let nuovoInner = inner.replace(
+      /(<tr[^>]*>[\s\S]*?<td[^>]*>[\s\S]*?<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>[\s\S]*?<\/tr>)/gi,
+      function(__, c1, cellaVoto, c3) {
+        const clean = cellaVoto.replace(/\s+/g, ' ').trim();
+        const matchVote = clean.match(/([A-Z])\s*$/i);
+        if (!matchVote) return c1 + cellaVoto + c3;
+        const votoCorrente = matchVote[1].toUpperCase();
+        if (from && votoCorrente !== from) return c1 + cellaVoto + c3;
+        const nuovo = aggiornaVotoConLink(cellaVoto, to, linkVoto);
+        return c1 + nuovo + c3;
+      }
+    );
+    return start + nuovoInner + end;
+  });
+
+  return out;
+}
+
+function aggiornaPianoStudiStudente(html, rawMods, linkVoto) {
+  const mods = parseKeyValueList(rawMods);
+  if (!mods.length) return html;
+
+  let out = html;
+
+  mods.forEach(mod => {
+    if (mod.type === 'single') {
+      const nome = mod.key;
+      const nuovoVoto = mod.value.toUpperCase();
+      const nomeNorm = normalizeText(nome);
+
+      out = out.replace(
+        /(<tr[^>]*>[\s\S]*?<td[^>]*>)([\s\S]*?)(<\/td>\s*<td[^>]*[^>]*text-align\s*:\s*center[^>]*>)([\s\S]*?)(<\/td>[\s\S]*?<\/tr>)/gi,
+        function(match, p1, cellaNome, p3, cellaVoto, p5) {
+          const plainNome = normalizeText(cellaNome.replace(/<[^>]+>/g, ' '));
+          if (!plainNome.includes(nomeNorm)) return match;
+          return p1 + cellaNome + p3 + aggiornaVotoConLink(cellaVoto, nuovoVoto, linkVoto) + p5;
+        }
+      );
+
+      out = out.replace(
+        /(<tr[^>]*>[\s\S]*?<td[^>]*>)([\s\S]*?)(<\/td>\s*<td[^>]*>)([\s\S]*?)(<\/td>[\s\S]*?<\/tr>)/gi,
+        function(match, p1, cellaNome, p3, cellaVoto, p5) {
+          const plainNome = normalizeText(cellaNome.replace(/<[^>]+>/g, ' '));
+          const votoGiaStoricitizzato = /<del>/i.test(cellaVoto);
+          if (!plainNome.includes(nomeNorm)) return match;
+          if (votoGiaStoricitizzato && normalizeText(cellaVoto).includes(normalizeText(nuovoVoto))) return match;
+          return p1 + cellaNome + p3 + aggiornaVotoConLink(cellaVoto, nuovoVoto, linkVoto) + p5;
+        }
+      );
+    }
+
+    if (mod.type === 'all') {
+      out = aggiornaTutteConoscenzeMateria(out, mod.materia, mod.pattern, linkVoto);
+    }
+  });
+
+  return out;
+}
+
+function aggiornaSapienzeAdulto(html, rawMods, esito) {
+  const mods = parseKeyValueList(rawMods);
+  if (!mods.length) return html;
+
+  const stato = esito || { applicate: [], ignorate: [], nonValide: [] };
+  stato.applicate = stato.applicate || [];
+  stato.ignorate = stato.ignorate || [];
+  stato.nonValide = stato.nonValide || [];
+
+  let out = html;
+
+  // Aggiorna ogni Sapienza cercando il nome nella prima cella della riga e
+  // modificando esclusivamente il data-html="livelloN" della seconda cella.
+  // Questo evita dipendenze troppo rigide da spazi, a-capo o attributi HTML.
+  mods.forEach(mod => {
+    if (mod.type !== 'single') return;
+
+    const nome = mod.key.trim();
+    const nomeNorm = normalizeText(nome);
+    const livello = parseInt(mod.value, 10);
+    if (!Number.isFinite(livello)) {
+      stato.nonValide.push(nome);
+      return;
+    }
+
+    let trovata = false;
+    out = out.replace(/<tr([^>]*)>([\s\S]*?)<\/tr>/gi, function(match, trAttrs, rowInner) {
+      const celle = [...rowInner.matchAll(/<t([dh])([^>]*)>([\s\S]*?)<\/t\1>/gi)];
+      if (celle.length < 2) return match;
+
+      const nomeCella = normalizeText(celle[0][3].replace(/<[^>]+>/g, ' '));
+      if (nomeCella !== nomeNorm) return match;
+
+      const secondaCella = celle[1][0];
+      if (!/data-html\s*=\s*["']livello\d+["']/i.test(secondaCella)) return match;
+
+      trovata = true;
+      const nuovaSecondaCella = secondaCella.replace(
+        /(data-html\s*=\s*["']livello)\d+(["'])/i,
+        `$1${livello}$2`
+      );
+
+      return match.replace(secondaCella, nuovaSecondaCella);
+    });
+
+    if (trovata) stato.applicate.push(nome);
+    else stato.ignorate.push(nome);
+  });
+
+  // Ricalcola automaticamente il totale di ciascuna tabella di Sapienza
+  // (es. "Sapienza Mentale: 5/25") sommando i livelli ora presenti.
+  out = out.replace(/<table([^>]*)>([\s\S]*?)<\/table>/gi, function(tableMatch, tableAttrs, inner) {
+    if (!/<td[^>]*>\s*Sapienza\s+[^<:]+:\s*\d+\s*\/\s*\d+\s*<\/td>/i.test(inner)) {
+      return tableMatch;
+    }
+
+    const livelli = [...inner.matchAll(/data-html\s*=\s*["']livello(\d+)["']/gi)]
+      .map(m => parseInt(m[1], 10))
+      .filter(Number.isFinite);
+
+    if (!livelli.length) return tableMatch;
+    const totale = livelli.reduce((somma, n) => somma + n, 0);
+
+    const nuovoInner = inner.replace(
+      /<td([^>]*)>\s*(Sapienza\s+[^<:]+):\s*\d+\s*\/\s*(\d+)\s*<\/td>/i,
+      function(_, tdAttrs, etichetta, massimo) {
+        return `<td${tdAttrs}>${etichetta}: ${totale}/${massimo}</td>`;
+      }
+    );
+
+    return `<table${tableAttrs}>${nuovoInner}</table>`;
+  });
+
+  return out;
+}
+
+function ricalcolaTotaleEccezionale(html) {
+  // Isola la sezione "Piano di Studi" dell'anno CORRENTE (data-label="Studi"):
+  // solo le Conoscenze qui dentro contano per il contatore — non le Extra/Avanzate
+  // (altra sezione della scheda) né gli anni passati archiviati nello [SPOILER]
+  // in fondo, che restano intoccati come registro storico.
+  const rxSezione = /(data-label="Studi">[\s\S]*?)(<div data-label="[^"]*"|$)/;
+  const m = html.match(rxSezione);
+  if (!m) return html;
+  const sezione = m[1];
+
+  // conta le celle voto il cui valore FINALE (dopo eventuali <del> storici gia'
+  // presenti) e' "E" — stessa logica di lettura usata da aggiornaVotoConLink,
+  // cosi' un voto sceso da E a un voto inferiore non resta erroneamente contato.
+  const celleVoto = [...sezione.matchAll(/<td[^>]*text-align\s*:\s*center[^>]*>([\s\S]*?)<\/td>/gi)];
+  let conteggio = 0;
+  celleVoto.forEach(cella => {
+    const clean = cella[1].replace(/\s+/g, ' ').trim();
+    const mVoto = clean.match(/^(?:<del>[\s\S]*?<\/del>\s*)*([A-Z]+)\s*$/i);
+    if (mVoto && mVoto[1].toUpperCase() === 'E') conteggio++;
+  });
+
+  const sezioneAggiornata = sezione.replace(
+    /(<b>\s*Totale Eccezionale:?\s*<\/b>\s*)(\d+)/i,
+    `$1${conteggio}`
+  );
+  return html.replace(sezione, sezioneAggiornata);
+}
+
+function aggiornaPianoOSapienze(html, esitoSapienze) {
+  const tipo = document.querySelector('input[name="tipoPg"]:checked')?.value || 'adulto';
+  const linkVoto = (document.getElementById('linkVoto').value || '').trim();
+  const modMaterie = document.getElementById('modMaterie').value || '';
+  const modSapienze = document.getElementById('modSapienze').value || '';
+
+  if (!html.trim()) return html;
+
+  if (tipo === 'studente') {
+    let out = aggiornaPianoStudiStudente(html, modMaterie, linkVoto);
+    out = ricalcolaTotaleEccezionale(out);
+    return out;
+  }
+  return aggiornaSapienzeAdulto(html, modSapienze, esitoSapienze);
+}
+
+function elaboraTerminale() {
+  // Un solo documento (Scheda Valori) su cui vengono applicate in sequenza
+  // tutte le modifiche: Punti/Prestigio, fondo extra, Bagaglio, Materie/Sapienze.
+  const schedaValoriHTML = document.getElementById('inputScheda').value || '';
+  const modInventario = document.getElementById('modInventario').value || '';
+  const puntiCasaIniziali = parseInt(document.getElementById('inputPuntiCasaIniziali').value, 10) || 0;
+  const rawOriginale = document.getElementById('inputComplessivoOriginale')?.value || '';
+
+  const deltasBoxA = estraiDeltaDaBoxA();
+  const extraBoxA = estraiDeltaGaleoniExtraDaBoxA();
+  const riconciliati = riconciliaVariazioniConOriginale(deltasBoxA, extraBoxA, rawOriginale);
+  const deltas = riconciliati.deltas;
+
+  const dataScheda = estraiValoriInizialiScheda(schedaValoriHTML);
+  const updatedValori = aggiornaSchedaConValori(schedaValoriHTML, dataScheda, deltas);
+
+  let html = updatedValori.html;
+  const extraInfo = aggiornaGaleoniExtra(html, riconciliati.extraGaleoni, riconciliati.originale.baseExtraRiferita);
+  html = extraInfo.html;
+
+  const esitoInventario = { ignorate: [] };
+  html = aggiornaBagaglio(html, modInventario, esitoInventario);
+
+  const esitoSapienze = { applicate: [], ignorate: [], nonValide: [] };
+  html = aggiornaPianoOSapienze(html, esitoSapienze);
+
+  const registro = costruisciRegistro(
+    dataScheda.iniziali,
+    updatedValori.finali,
+    deltas['Punti Casa'] || 0,
+    puntiCasaIniziali,
+    extraInfo
+  );
+
+  document.getElementById('outForum').value = registro;
+  document.getElementById('outScheda').value = html;
+
+  const avvisi = [];
+
+  riconciliati.correzioni.forEach(msg => {
+    avvisi.push(`<b>Controllo incrociato:</b> ${msg}`);
+  });
+
+  if (updatedValori.ignorati && updatedValori.ignorati.length) {
+    avvisi.push(
+      'Statistiche non applicate perché assenti dalla Scheda Valori: <b>' +
+      updatedValori.ignorati.join(', ') + '</b>.'
+    );
+  }
+
+  if (extraInfo.errore) avvisi.push(extraInfo.errore);
+
+  if (
+    riconciliati.originale.extraPresente &&
+    riconciliati.originale.baseExtraRiferita !== null &&
+    extraInfo.inizialeScheda !== null &&
+    Math.abs(riconciliati.originale.baseExtraRiferita - extraInfo.inizialeScheda) > 1e-9
+  ) {
+    avvisi.push(
+      `Il testo originale indica una base di ${formatNumeroItaliano(riconciliati.originale.baseExtraRiferita)} Galeoni Extra, ` +
+      `mentre la Scheda Valori ne contiene ${formatNumeroItaliano(extraInfo.inizialeScheda)}. ` +
+      `Per il controllo incrociato è stata usata la base dichiarata nel testo originale, ottenendo ${formatNumeroItaliano(extraInfo.finale)} Galeoni Extra finali.`
+    );
+  }
+
+  if (esitoSapienze.ignorate.length) {
+    avvisi.push('Sapienze richieste ma non trovate nella scheda: <b>' + esitoSapienze.ignorate.join(', ') + '</b>.');
+  }
+  if (esitoSapienze.nonValide.length) {
+    avvisi.push('Sapienze con livello non valido e quindi non applicate: <b>' + esitoSapienze.nonValide.join(', ') + '</b>.');
+  }
+
+  if (esitoInventario.ignorate.length) {
+    avvisi.push('Movimenti inventario non applicati: <b>' + esitoInventario.ignorate.join(', ') + '</b>.');
+  }
+
+  ['Punti Post', 'Galeoni'].forEach(nomeCampo => {
+    if (Object.prototype.hasOwnProperty.call(updatedValori.finali, nomeCampo) && updatedValori.finali[nomeCampo] < 0) {
+      const haDebito = new RegExp('<b>\\s*Debito \\(' + escapeRx(nomeCampo) + '\\):', 'i').test(html);
+      if (!haDebito) {
+        avvisi.push(
+          `<b>${nomeCampo}</b> risulta negativo (${formatNumeroItaliano(updatedValori.finali[nomeCampo])}) ` +
+          `e nella scheda non è presente una voce Debito (${nomeCampo}). Controlla che questo sia l'esito previsto dal regolamento.`
+        );
+      }
+    }
+  });
+
+  const warnBox = document.getElementById('ignorati_box');
+  if (warnBox) {
+    if (avvisi.length) {
+      warnBox.innerHTML = '<b>⚠ Controlli del generatore:</b><br>' + avvisi.map(x => '• ' + x).join('<br>');
+      warnBox.classList.add('show');
+    } else {
+      warnBox.classList.remove('show');
+      warnBox.innerHTML = '';
+    }
+  }
+}
+</script>
+
+</body>
+</html>
