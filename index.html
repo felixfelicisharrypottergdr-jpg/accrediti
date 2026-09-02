@@ -1162,7 +1162,26 @@ function aggiornaSapienzeAdulto(html, rawMods) {
     out = out.replace(rx, `$1${livello}$3`);
   });
 
-  return out;
+  return ricalcolaTotaliSapienze(out);
+}
+
+function ricalcolaTotaliSapienze(html) {
+  // Ogni blocco Sapienza ha una riga finale "Sapienza NOME: X/Y" che e' un
+  // TOTALE calcolato (somma dei livelli di tutte le Conoscenze in quel
+  // blocco), non un valore a se' stante — va ricalcolato ogni volta che
+  // cambia un livello, altrimenti resta con la cifra vecchia.
+  return html.replace(
+    /(<div class="sapienza"><table>[\s\S]*?<\/table><\/div>)/gi,
+    (blocco) => {
+      const livelli = [...blocco.matchAll(/data-html="livello(\d+)"/gi)].map(m => parseInt(m[1], 10) || 0);
+      if (!livelli.length) return blocco;
+      const somma = livelli.reduce((a, b) => a + b, 0);
+      return blocco.replace(
+        /(<t[dh][^>]*>\s*Sapienza\s+[^:<]+:\s*)\d+(\s*\/\s*\d+\s*<\/t[dh]>)/i,
+        `$1${somma}$2`
+      );
+    }
+  );
 }
 
 function ricalcolaTotaleEccezionale(html) {
