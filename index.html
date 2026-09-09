@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generatore Accrediti — Scheda Valori</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -248,42 +249,244 @@
         .result-card textarea { min-height:230px; }
         #trasferimenti_panel { padding:14px; border-radius:12px; border:1px solid rgba(156,107,36,.28); background:#FBF0D9; }
         @media (max-width:760px) { body { padding:12px 9px 48px; } .masthead { border-radius:16px; padding:20px 14px; } .panel { padding:17px 14px; border-radius:13px; } .type-picker, .results-grid { grid-template-columns:1fr; } .action-bar { bottom:6px; } .action-bar button { padding:12px 10px; font-size:13px; } }
+
+
+        /* =========================================================
+           STAFF UI/UX v4 — coerente con gli altri generatori
+           ========================================================= */
+        @font-face {
+            font-family: 'magic';
+            src: url('https://dl.dropboxusercontent.com/scl/fi/nbzmrri4qyvc3tzx96911/HarryBeastDisplay-Regular.woff2?rlkey=he290voe32k33gowug23c1osc&st=nj9fgly1') format('woff2');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        :root {
+            --plum:#2E2437;
+            --plum-deep:#211927;
+            --cream:#FFF9EA;
+            --shadow-soft:0 12px 30px rgba(55,42,31,.08);
+            --shadow-lift:0 16px 38px rgba(44,31,24,.12);
+        }
+        html { scroll-behavior:smooth; }
+        body {
+            background:
+                radial-gradient(circle at 12% -8%, rgba(201,162,92,.16), transparent 33%),
+                radial-gradient(circle at 92% 8%, rgba(77,102,80,.10), transparent 28%),
+                linear-gradient(180deg,#F2E9D5 0%,#EDE1C7 100%);
+            background-attachment:fixed;
+            padding:24px 20px 64px;
+        }
+        .container { max-width:1140px; gap:18px; }
+
+        .masthead {
+            position:relative;
+            isolation:isolate;
+            overflow:hidden;
+            padding:23px 22px 22px;
+            border:1px solid rgba(183,145,74,.55);
+            border-radius:22px;
+            background:
+                radial-gradient(circle at 50% -10%, rgba(210,177,108,.18), transparent 38%),
+                linear-gradient(145deg,#35283E 0%,#241B2B 52%,#1F1825 100%);
+            box-shadow:0 18px 38px rgba(43,34,51,.16), inset 0 1px 0 rgba(255,255,255,.07);
+        }
+        .masthead::before,.masthead::after {
+            content:""; position:absolute; z-index:-1; pointer-events:none; border-radius:50%;
+            border:1px solid rgba(216,192,138,.09);
+        }
+        .masthead::before { width:280px; height:280px; left:-155px; top:-170px; }
+        .masthead::after { width:340px; height:340px; right:-205px; bottom:-265px; }
+        .masthead .crest {
+            width:72px; height:72px; margin:0 auto 12px; display:flex; align-items:center; justify-content:center;
+            border-radius:50%; border:1px solid rgba(231,207,150,.82);
+            background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.14),transparent 28%),linear-gradient(145deg,#5B4631,#2A202F 72%);
+            color:#F1DAA4; font-size:27px;
+            box-shadow:0 0 0 6px rgba(216,192,138,.07),0 13px 28px rgba(0,0,0,.25),inset 0 0 18px rgba(216,192,138,.08);
+        }
+        .masthead .eyebrow { color:#D9C18B; font-size:12px; letter-spacing:.11em; text-transform:uppercase; }
+        .masthead h1 {
+            font-family:'magic','Cinzel',Georgia,serif; font-weight:normal; color:#F6E8BF;
+            font-size:clamp(31px,4vw,40px); letter-spacing:1.7px; text-shadow:0 3px 18px rgba(0,0,0,.35);
+        }
+        .masthead .rule { width:220px; background:linear-gradient(90deg,transparent,rgba(216,192,138,.55) 20%,#D7B66C 50%,rgba(216,192,138,.55) 80%,transparent); }
+        .masthead .rule::after { background:#241B2B; color:#D7B66C; }
+
+        .panel {
+            position:relative; overflow:hidden; padding:22px 24px; border:1px solid rgba(184,156,101,.38);
+            border-radius:17px; background:linear-gradient(145deg,rgba(255,255,255,.45),transparent 34%),linear-gradient(180deg,#FCF8EE 0%,#F8F1E2 100%);
+            box-shadow:0 1px 1px rgba(255,255,255,.8) inset,var(--shadow-soft);
+        }
+        .panel::before { content:""; position:absolute; left:8%; right:8%; top:0; height:1px; background:linear-gradient(90deg,transparent,rgba(156,107,36,.48),transparent); }
+        .panel h2 { font-family:'magic','Cormorant Garamond',Georgia,serif; font-weight:normal; color:var(--plum); font-size:24px; margin:0; border:0; padding:0; }
+
+        .workspace-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px; }
+        .workspace-title { display:flex; align-items:center; gap:11px; }
+        .workspace-icon {
+            width:38px; height:38px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+            color:var(--gold-deep); background:rgba(216,192,138,.20); border:1px solid rgba(156,107,36,.32); flex:0 0 38px;
+        }
+        .status-strip { display:flex; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+        .state-chip {
+            display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+            background:rgba(255,255,255,.72); border:1px solid rgba(156,107,36,.22); color:#746A78;
+            font-size:11px; font-weight:800; white-space:nowrap;
+        }
+        .state-chip.ready { color:#31523D; border-color:rgba(63,107,79,.22); background:#E8F0E8; }
+        .state-chip.error { color:#7A3131; border-color:rgba(139,58,58,.24); background:#F5E6E1; }
+        .state-chip i { font-size:10px; }
+
+        .input-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .input-card {
+            min-width:0; padding:15px; border:1px solid rgba(184,156,101,.34); border-radius:14px;
+            background:rgba(255,255,255,.62); box-shadow:0 5px 14px rgba(55,42,31,.045);
+        }
+        .input-card.ready { border-color:rgba(63,107,79,.28); box-shadow:0 0 0 2px rgba(63,107,79,.045),0 5px 14px rgba(55,42,31,.045); }
+        .input-card.error { border-color:rgba(139,58,58,.30); }
+        .input-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; }
+        .input-card-title { display:flex; align-items:center; gap:8px; color:var(--ink); font-weight:800; font-size:13.5px; }
+        .input-card-title i { color:var(--gold-deep); width:18px; text-align:center; }
+        .mini-badge {
+            display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; border:1px solid rgba(156,107,36,.22);
+            background:#F7ECD3; color:#76501B; font-size:10.5px; font-weight:800; white-space:nowrap;
+        }
+        .mini-badge.ready { background:#E5EFE6; border-color:rgba(63,107,79,.20); color:#31523D; }
+        .mini-badge.error { background:#F5E6E1; border-color:rgba(139,58,58,.20); color:#7A3131; }
+        .input-card textarea { min-height:250px !important; height:250px; resize:vertical; border-radius:11px; background:rgba(255,255,255,.92); }
+        textarea,input { border-color:rgba(156,107,36,.38); border-radius:10px; background:rgba(255,255,255,.88); }
+        textarea:hover,input:hover { border-color:rgba(156,107,36,.58); background:#fff; }
+        textarea:focus,input:focus { background:#fff; border-color:#A8762C; box-shadow:0 0 0 3px rgba(156,107,36,.12),inset 0 1px 2px rgba(55,42,31,.03); }
+        .import-inline { margin-top:9px; padding:8px 10px; border-radius:9px; font-size:11.5px; line-height:1.35; }
+
+        .conditional-panel { padding-top:18px; }
+        .conditional-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+        .conditional-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        .specific-section { margin:0 !important; padding:13px 14px; border-radius:12px; background:rgba(255,255,255,.58); }
+        .specific-section-title { margin-bottom:8px; }
+        .specific-section .field-card { margin:0; padding:0; border:0; background:transparent; }
+        .specific-section label { margin:0 0 5px; font-size:11.5px; }
+
+        .action-bar {
+            position:sticky; bottom:10px; z-index:40; display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:9px;
+            align-items:center; padding:9px; border:1px solid rgba(156,107,36,.26); border-radius:15px;
+            background:rgba(248,241,226,.92); backdrop-filter:blur(10px); box-shadow:0 10px 25px rgba(55,42,31,.12);
+        }
+        .action-hint { padding:0 8px; color:#746A78; font-size:11.5px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .action-bar button { width:auto; min-height:44px; padding:10px 18px; border-radius:11px; }
+        .action-primary { min-width:190px; }
+        .action-primary:disabled { cursor:not-allowed; transform:none; filter:grayscale(.25); opacity:.48; box-shadow:none; }
+        .action-reset { min-width:118px; }
+
+        #risultati_panel { overflow:visible; scroll-margin-top:16px; }
+        .results-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+        .results-tabs {
+            display:flex; gap:6px; flex-wrap:wrap; padding:6px; border-radius:13px;
+            border:1px solid rgba(156,107,36,.22); background:rgba(255,255,255,.48);
+        }
+        .result-tab-btn {
+            width:auto; padding:8px 12px; border-radius:9px; background:transparent; color:#62586A; box-shadow:none;
+            border:1px solid transparent; font-size:11.5px;
+        }
+        .result-tab-btn:hover { transform:none; background:rgba(216,192,138,.14); box-shadow:none; }
+        .result-tab-btn.active { color:#FFF5DD; border-color:rgba(231,207,150,.35); background:linear-gradient(145deg,#4A394F,#2A2131); box-shadow:0 5px 12px rgba(46,36,55,.17); }
+        .result-pane { display:none; }
+        .result-pane.active { display:block; }
+        .result-card { padding:0; border:0; background:transparent; }
+        .result-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+        .result-card-title { font-weight:800; font-size:12.5px; color:#514859; }
+        .result-card textarea { min-height:300px; border-radius:12px; }
+        .result-card .btn-copia { margin:0; }
+        .btn-copia { width:auto; padding:7px 11px; border-radius:9px; font-size:11.5px; }
+        #trasferimenti_panel { padding:0; border:0; background:transparent; }
+        #trasferimenti_panel > label { display:none; }
+        #trasferimenti_destinatari > .result-card { padding:14px; border:1px solid rgba(184,156,101,.30); border-radius:12px; background:rgba(255,255,255,.58); }
+        #trasferimenti_destinatari textarea { min-height:180px !important; }
+        .warn-box { border-radius:10px; margin:0 0 12px; }
+
+        .btn-torna-su { width:46px; height:46px; right:22px; bottom:78px; font-size:16px; border-radius:50%; }
+
+        @media (max-width:820px) {
+            body { padding:13px 10px 52px; }
+            .container { gap:13px; }
+            .masthead { padding:20px 14px 19px; border-radius:17px; }
+            .masthead .crest { width:64px; height:64px; font-size:24px; }
+            .panel { padding:17px 15px; border-radius:14px; }
+            .workspace-head,.results-head { align-items:flex-start; flex-direction:column; }
+            .status-strip { justify-content:flex-start; }
+            .input-grid,.conditional-grid { grid-template-columns:1fr; }
+            .input-card textarea { min-height:210px !important; height:210px; }
+            .action-bar { bottom:6px; grid-template-columns:1fr auto; }
+            .action-hint { grid-column:1 / -1; padding:0 5px 2px; }
+            .action-primary { min-width:0; width:100%; }
+            .action-reset { min-width:0; }
+            .results-tabs { width:100%; }
+            .result-tab-btn { flex:1; }
+            .btn-torna-su { right:14px; bottom:104px; }
+        }
+
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="masthead">
+        <div class="crest" aria-hidden="true"><i class="fa-solid fa-file-circle-check"></i></div>
         <span class="eyebrow">Felix Felicis GDR · Staff</span>
         <h1>Generatore Accrediti</h1>
         <div class="rule"></div>
     </div>
 
-    <div class="panel">
-        <h2><span class="step-num">1</span>Lista della Spesa</h2>
-        <textarea id="inputComplessivoOriginale" style="min-height:210px" placeholder="Incolla qui l’intera Lista della Spesa pubblicata dal PG..."></textarea>
-        <div id="import_status" class="info-box" style="display:none; margin-top:12px;"></div>
-    </div>
-
-    <div class="panel">
-        <h2><span class="step-num">2</span>Scheda Valori</h2>
-        <textarea id="inputScheda" style="min-height:240px" placeholder="Incolla qui il codice HTML completo della Scheda Valori..."></textarea>
-    </div>
-
-    <div class="panel" id="dati_mancanti_panel" style="display:none;">
-        <h2><span class="step-num">3</span>Dati da completare</h2>
-        <div class="specific-section pg-only-studente" id="link_voto_wrap" style="display:none;">
-            <div class="specific-section-title"><i class="fa-solid fa-link"></i>Link della richiesta</div>
-            <div class="field-card">
-                <label for="linkVoto">URL del post della Lista</label>
-                <input type="text" id="linkVoto" placeholder="es. ?t=80721630#entry682188505">
+    <div class="panel" id="workspace_panel">
+        <div class="workspace-head">
+            <div class="workspace-title">
+                <span class="workspace-icon" aria-hidden="true"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <h2>Dati da elaborare</h2>
+            </div>
+            <div class="status-strip" aria-live="polite">
+                <span class="state-chip" id="lista_state_chip"><i class="fa-solid fa-list-check"></i> Lista</span>
+                <span class="state-chip" id="scheda_state_chip"><i class="fa-solid fa-address-card"></i> Scheda</span>
             </div>
         </div>
-        <div class="specific-section pg-only-studente" id="punti_casa_wrap" style="display:none; margin-top:12px;">
-            <div class="specific-section-title"><i class="fa-solid fa-shield-halved"></i>Punti Casa</div>
-            <div class="field-card">
-                <label for="inputPuntiCasaIniziali">Valore attuale prima dell’accredito</label>
-                <input type="number" id="inputPuntiCasaIniziali" placeholder="es. 1245">
+
+        <div class="input-grid">
+            <section class="input-card" id="lista_input_card">
+                <div class="input-card-head">
+                    <div class="input-card-title"><i class="fa-solid fa-scroll"></i>Lista della Spesa</div>
+                    <span class="mini-badge" id="lista_badge">In attesa</span>
+                </div>
+                <textarea id="inputComplessivoOriginale" placeholder="Incolla l’intera Lista della Spesa..."></textarea>
+                <div id="import_status" class="import-inline" style="display:none;"></div>
+            </section>
+
+            <section class="input-card" id="scheda_input_card">
+                <div class="input-card-head">
+                    <div class="input-card-title"><i class="fa-solid fa-id-card-clip"></i>Scheda Valori</div>
+                    <span class="mini-badge" id="scheda_badge">In attesa</span>
+                </div>
+                <textarea id="inputScheda" placeholder="Incolla il codice HTML completo della Scheda Valori..."></textarea>
+            </section>
+        </div>
+    </div>
+
+    <div class="panel conditional-panel" id="dati_mancanti_panel" style="display:none;">
+        <div class="conditional-head">
+            <span class="workspace-icon" aria-hidden="true"><i class="fa-solid fa-pen-to-square"></i></span>
+            <h2>Da completare</h2>
+        </div>
+        <div class="conditional-grid">
+            <div class="specific-section pg-only-studente" id="link_voto_wrap" style="display:none;">
+                <div class="specific-section-title"><i class="fa-solid fa-link"></i>Link richiesta</div>
+                <div class="field-card">
+                    <label for="linkVoto">URL del post</label>
+                    <input type="text" id="linkVoto" placeholder="?t=...#entry...">
+                </div>
+            </div>
+            <div class="specific-section pg-only-studente" id="punti_casa_wrap" style="display:none;">
+                <div class="specific-section-title"><i class="fa-solid fa-shield-halved"></i>Punti Casa</div>
+                <div class="field-card">
+                    <label for="inputPuntiCasaIniziali">Valore attuale</label>
+                    <input type="number" id="inputPuntiCasaIniziali" placeholder="1245">
+                </div>
             </div>
         </div>
     </div>
@@ -298,33 +501,55 @@
     </div>
 
     <div class="action-bar">
-        <button class="action-primary" onclick="elaboraTerminale()">Genera risultati →</button>
-        <button type="button" class="btn-danger action-reset" onclick="resetGeneratore()">Cancella tutto</button>
+        <div class="action-hint" id="action_hint">Incolla Lista e Scheda Valori</div>
+        <button class="action-primary" id="generate_btn" onclick="elaboraTerminale()" disabled><i class="fa-solid fa-wand-magic-sparkles"></i>&nbsp; Genera risultati</button>
+        <button type="button" class="btn-danger action-reset" onclick="resetGeneratore()"><i class="fa-solid fa-trash-can"></i>&nbsp; Pulisci</button>
     </div>
 
     <div class="panel" id="risultati_panel" style="display:none;">
-        <h2><span class="step-num">4</span>Risultati finali</h2>
-        <div id="ignorati_box" class="warn-box"></div>
-        <div class="results-grid">
-            <div class="result-card">
-                <label for="outForum">Registro Accrediti</label>
-                <textarea id="outForum" class="output-box" readonly></textarea>
-                <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')">📋 Copia registro</button>
+        <div class="results-head">
+            <div class="workspace-title">
+                <span class="workspace-icon" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+                <h2>Risultati</h2>
             </div>
-            <div class="result-card">
-                <label for="outScheda">Scheda Valori aggiornata</label>
-                <textarea id="outScheda" class="output-box" readonly></textarea>
-                <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')">📋 Copia scheda aggiornata</button>
+            <div class="results-tabs" role="tablist">
+                <button type="button" class="result-tab-btn active" data-result-tab="registro"><i class="fa-solid fa-clipboard-list"></i>&nbsp; Registro</button>
+                <button type="button" class="result-tab-btn" data-result-tab="scheda"><i class="fa-solid fa-file-code"></i>&nbsp; Scheda</button>
+                <button type="button" class="result-tab-btn" id="trasferimenti_tab_btn" data-result-tab="trasferimenti" style="display:none;"><i class="fa-solid fa-arrow-right-arrow-left"></i>&nbsp; Trasferimenti</button>
             </div>
         </div>
-        <div id="trasferimenti_panel" style="display:none; margin-top:14px;">
-            <label>📦 Trasferimenti ad altri PG</label>
-            <div id="trasferimenti_destinatari"></div>
+
+        <div id="ignorati_box" class="warn-box"></div>
+
+        <div class="result-pane active" id="result_registro">
+            <div class="result-card">
+                <div class="result-card-head">
+                    <div class="result-card-title">Registro Accrediti</div>
+                    <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')"><i class="fa-regular fa-copy"></i>&nbsp; Copia</button>
+                </div>
+                <textarea id="outForum" class="output-box" readonly></textarea>
+            </div>
+        </div>
+
+        <div class="result-pane" id="result_scheda">
+            <div class="result-card">
+                <div class="result-card-head">
+                    <div class="result-card-title">Scheda Valori aggiornata</div>
+                    <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')"><i class="fa-regular fa-copy"></i>&nbsp; Copia</button>
+                </div>
+                <textarea id="outScheda" class="output-box" readonly></textarea>
+            </div>
+        </div>
+
+        <div class="result-pane" id="result_trasferimenti">
+            <div id="trasferimenti_panel" style="display:none;">
+                <label>Trasferimenti ad altri PG</label>
+                <div id="trasferimenti_destinatari"></div>
+            </div>
         </div>
     </div>
 
-    <button type="button" class="btn-torna-su" onclick="tornaSu()" title="Torna su">⬆️</button>
-
+    <button type="button" class="btn-torna-su" onclick="tornaSu()" title="Torna su"><i class="fa-solid fa-arrow-up"></i></button>
 </div>
 
 <script>
@@ -334,11 +559,84 @@ function aggiornaTipoPGUI() {
   document.querySelectorAll('.pg-only-adulto').forEach(el => el.classList.toggle('pg-hidden', tipo !== 'adulto'));
 }
 
+function setStatoElemento(chipId, cardId, badgeId, stato, testoBadge) {
+  const chip = document.getElementById(chipId);
+  const card = document.getElementById(cardId);
+  const badge = document.getElementById(badgeId);
+  [chip, card, badge].forEach(el => {
+    if (!el) return;
+    el.classList.remove('ready','error');
+    if (stato) el.classList.add(stato);
+  });
+  if (badge && testoBadge) badge.textContent = testoBadge;
+}
+
+function aggiornaStatoWorkspace() {
+  const listaRaw = document.getElementById('inputComplessivoOriginale')?.value || '';
+  const schedaRaw = document.getElementById('inputScheda')?.value || '';
+  const parsed = listaRaw.trim() ? leggiProtocolloAccrediti(listaRaw) : null;
+  const listaOk = !!(parsed && parsed.ok);
+  const schedaOk = !!schedaRaw.trim();
+
+  if (!listaRaw.trim()) setStatoElemento('lista_state_chip','lista_input_card','lista_badge','', 'In attesa');
+  else if (listaOk) {
+    const formato = Number(parsed.data.versione) === 2 ? 'V2' : 'Formato attuale';
+    setStatoElemento('lista_state_chip','lista_input_card','lista_badge','ready', formato);
+  } else setStatoElemento('lista_state_chip','lista_input_card','lista_badge','error','Non riconosciuta');
+
+  if (schedaOk) setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','ready','Pronta');
+  else setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','', 'In attesa');
+
+  let extraOk = true;
+  let manca = '';
+  if (listaOk) {
+    const d = parsed.data;
+    const serveLink = d.tipoPg === 'studente' && d.boxE.length > 0;
+    const serveCasa = d.tipoPg === 'studente' && d.boxA.some(r => /Punti\s+Casa/i.test(r));
+    if (serveLink && !String(document.getElementById('linkVoto')?.value || '').trim()) { extraOk = false; manca = 'Completa il link richiesta'; }
+    else if (serveCasa && !String(document.getElementById('inputPuntiCasaIniziali')?.value || '').trim()) { extraOk = false; manca = 'Inserisci i Punti Casa'; }
+  }
+
+  const pronto = listaOk && schedaOk && extraOk;
+  const btn = document.getElementById('generate_btn');
+  if (btn) btn.disabled = !pronto;
+  const hint = document.getElementById('action_hint');
+  if (hint) {
+    if (pronto) hint.textContent = `${parsed.data.nomePg || 'PG'} · pronto per l’accredito`;
+    else if (manca) hint.textContent = manca;
+    else if (!listaRaw.trim() && !schedaRaw.trim()) hint.textContent = 'Incolla Lista e Scheda Valori';
+    else if (!listaOk) hint.textContent = 'Lista da riconoscere';
+    else if (!schedaOk) hint.textContent = 'Incolla la Scheda Valori';
+    else hint.textContent = 'Completa i dati richiesti';
+  }
+}
+
+function attivaTabRisultato(nome) {
+  const target = document.getElementById('result_' + nome);
+  if (!target) return;
+  document.querySelectorAll('.result-pane').forEach(p => p.classList.toggle('active', p === target));
+  document.querySelectorAll('.result-tab-btn').forEach(b => b.classList.toggle('active', b.dataset.resultTab === nome));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input[name="tipoPg"]').forEach(r => r.addEventListener('change', aggiornaTipoPGUI));
   aggiornaTipoPGUI();
+
   const listaInput = document.getElementById('inputComplessivoOriginale');
-  if (listaInput) listaInput.addEventListener('input', () => applicaProtocolloLista(false));
+  const schedaInput = document.getElementById('inputScheda');
+  const linkVoto = document.getElementById('linkVoto');
+  const puntiCasa = document.getElementById('inputPuntiCasaIniziali');
+
+  if (listaInput) listaInput.addEventListener('input', () => { applicaProtocolloLista(false); aggiornaStatoWorkspace(); });
+  if (schedaInput) schedaInput.addEventListener('input', aggiornaStatoWorkspace);
+  if (linkVoto) linkVoto.addEventListener('input', aggiornaStatoWorkspace);
+  if (puntiCasa) puntiCasa.addEventListener('input', aggiornaStatoWorkspace);
+
+  document.querySelectorAll('[data-result-tab]').forEach(btn => {
+    btn.addEventListener('click', () => attivaTabRisultato(btn.dataset.resultTab));
+  });
+
+  aggiornaStatoWorkspace();
 });
 
 function formatNumeroItaliano(num) {
@@ -395,6 +693,10 @@ function resetGeneratore() {
   if (status) { status.style.display = 'none'; status.innerHTML = ''; }
   const mancanti = document.getElementById('dati_mancanti_panel');
   if (mancanti) mancanti.style.display = 'none';
+  const trasTab = document.getElementById('trasferimenti_tab_btn');
+  if (trasTab) trasTab.style.display = 'none';
+  attivaTabRisultato('registro');
+  aggiornaStatoWorkspace();
 
   tornaSu();
 }
@@ -403,10 +705,10 @@ async function copiaCampo(idCampo, idBottone) {
   const campo = document.getElementById(idCampo);
   const btn = document.getElementById(idBottone);
   if (!campo || !campo.value.trim()) return;
-  const etichettaOriginale = btn.textContent;
+  const etichettaOriginale = btn.innerHTML;
   function mostraConferma(ok) {
-    btn.textContent = ok ? '✅ Copiato!' : '⚠️ Copia manualmente (Ctrl+C)';
-    setTimeout(() => { btn.textContent = etichettaOriginale; }, 2000);
+    btn.innerHTML = ok ? '✅ Copiato!' : '⚠️ Copia manualmente (Ctrl+C)';
+    setTimeout(() => { btn.innerHTML = etichettaOriginale; }, 2000);
   }
   try {
     await navigator.clipboard.writeText(campo.value);
@@ -433,22 +735,102 @@ function normalizeText(s) {
 }
 function leggiProtocolloAccrediti(raw) {
   const testo = String(raw || '').replace(/\r/g, '');
-  const m = testo.match(/\[FF-ACCREDITI-V2\]\s*([\s\S]*?)\s*\[\/FF-ACCREDITI-V2\]/i);
-  if (!m) return { ok: false, errore: 'Blocco FF-ACCREDITI-V2 non trovato.' };
-  try {
-    const data = JSON.parse(m[1].trim());
-    if (!data || Number(data.versione) !== 2) return { ok: false, errore: 'Versione dati non valida.' };
-    if (!['studente','adulto'].includes(data.tipoPg)) return { ok: false, errore: 'Tipo PG non valido nei dati della Lista.' };
-    if (!Array.isArray(data.boxA) || !Array.isArray(data.boxE) || !Array.isArray(data.boxF) || !Array.isArray(data.boxG)) {
-      return { ok: false, errore: 'Blocco dati incompleto.' };
-    }
-    if (!Array.isArray(data.trasferimenti)) data.trasferimenti = [];
-    return { ok: true, data };
-  } catch (e) {
-    return { ok: false, errore: 'Blocco dati della Lista non leggibile.' };
-  }
-}
 
+  // Se una Lista contiene anche il blocco tecnico V2, lo leggiamo direttamente.
+  // Non è obbligatorio: il formato BOX qui sotto resta pienamente valido.
+  const marker = testo.match(/\[FF-ACCREDITI-V2\]\s*([\s\S]*?)\s*\[\/FF-ACCREDITI-V2\]/i);
+  if (marker) {
+    try {
+      const data = JSON.parse(marker[1].trim());
+      if (data && Number(data.versione) === 2 && ['studente','adulto'].includes(data.tipoPg) &&
+          Array.isArray(data.boxA) && Array.isArray(data.boxE) && Array.isArray(data.boxF) && Array.isArray(data.boxG)) {
+        if (!Array.isArray(data.trasferimenti)) data.trasferimenti = [];
+        return { ok: true, data };
+      }
+    } catch (e) {}
+  }
+
+  // Formato ufficiale pubblicato dal Generatore Lista della Spesa:
+  // <details> ... Dati per l'Accredito ... BOX A / E / F / G ... </details>
+  // Non richiede marcatori tecnici aggiuntivi.
+  const details = testo.match(/<details>\s*<summary>[\s\S]*?Dati\s+per\s+l['’]Accredito[\s\S]*?<\/summary>\s*([\s\S]*?)<\/details>/i);
+  if (!details) return { ok: false, errore: 'Riquadro “Dati per l’Accredito” non trovato.' };
+
+  const corpo = details[1].trim();
+  const boxes = { A: [], E: [], F: [], G: [] };
+  let corrente = null;
+
+  corpo.split('\n').forEach(rigaRaw => {
+    const riga = String(rigaRaw || '').trim();
+    if (!riga) return;
+
+    const intestazione = riga.match(/^<b>\s*BOX\s+([AEFG])\s*[—–-][\s\S]*?<\/b>\s*$/i);
+    if (intestazione) {
+      corrente = intestazione[1].toUpperCase();
+      return;
+    }
+
+    if (!corrente) return;
+    if (/^\((?:nessun[ao]|nessuna\s+variazione)\)$/i.test(riga)) return;
+    boxes[corrente].push(riga);
+  });
+
+  if (!boxes.A.length && !boxes.E.length && !boxes.F.length && !boxes.G.length) {
+    return { ok: false, errore: 'Il riquadro “Dati per l’Accredito” è presente ma non contiene BOX riconoscibili.' };
+  }
+
+  const nomeMatch = testo.match(/Lista\s+della\s+Spesa\s+di\s+([^<\n]+?)<\/b>/i);
+  const nomePg = nomeMatch ? nomeMatch[1].trim() : '';
+
+  // Il tipo PG viene dedotto dai dati che servono davvero all'accredito.
+  // E = Studente, F = Adulto. Se E/F non sono presenti, usiamo altri segnali
+  // inequivocabili; se la richiesta non contiene dati specifici, il tipo non
+  // incide sull'elaborazione e possiamo usare il default interno Adulto.
+  let tipoPg = null;
+  if (boxes.E.length && boxes.F.length) {
+    return { ok: false, errore: 'La Lista contiene contemporaneamente BOX E (Studente) e BOX F (Adulto).' };
+  }
+  if (boxes.E.length) tipoPg = 'studente';
+  if (boxes.F.length) tipoPg = 'adulto';
+
+  if (!tipoPg) {
+    const studenteEvidente = /Migliora\s+i\s+tuoi\s+Voti|BOX\s+E\s*[—–-]|FantaHogwarts|Punti\s+Casa|Stima\s+Docenti/i.test(testo);
+    const adultoEvidente = /Migliora\s+le\s+tue\s+Sapienze|BOX\s+F\s*[—–-]|FantaWiz|Galeoni\s+Extra/i.test(testo);
+    if (studenteEvidente && !adultoEvidente) tipoPg = 'studente';
+    else if (adultoEvidente && !studenteEvidente) tipoPg = 'adulto';
+    else tipoPg = 'adulto'; // nessuna operazione specifica: il tipo non cambia il risultato
+  }
+
+  // Le Liste BOX create nel breve periodo di transizione possono già contenere
+  // trasferimenti nel testo narrativo pur non avendo ancora il payload V2.
+  // Recuperiamo nome, quantità e destinatario direttamente dalla riga pubblicata.
+  const trasferimenti = [];
+  const rxTrasf = /^\s*-\s*(.+?)\s*:\s*-(\d+)\s*[—–-]\s*oggetto\s+da\s+trasferire\s+a\s*\[URL=([^\]]+)\](.+?)\[\/URL\]\s*$/gim;
+  let mt;
+  while ((mt = rxTrasf.exec(testo)) !== null) {
+    trasferimenti.push({
+      nome: mt[1].trim(),
+      quantita: parseInt(mt[2], 10) || 1,
+      destinatarioLink: mt[3].trim(),
+      destinatarioNome: mt[4].trim()
+    });
+  }
+
+  return {
+    ok: true,
+    data: {
+      versione: 'BOX',
+      tipoPg,
+      nomePg,
+      boxA: boxes.A,
+      boxE: boxes.E,
+      boxF: boxes.F,
+      boxG: boxes.G,
+      trasferimenti,
+      galeoniExtraBase: null
+    }
+  };
+}
 function applicaProtocolloLista(mostraErrore) {
   const raw = document.getElementById('inputComplessivoOriginale').value || '';
   const parsed = leggiProtocolloAccrediti(raw);
@@ -463,7 +845,8 @@ function applicaProtocolloLista(mostraErrore) {
       status.innerHTML = raw.trim() ? `<b>Lista non riconosciuta.</b> ${parsed.errore}` : '';
     }
     if (mancanti) mancanti.style.display = 'none';
-    if (mostraErrore && raw.trim()) alert('La Lista incollata non contiene dati FF-ACCREDITI-V2 validi.');
+    if (mostraErrore && raw.trim()) alert('La Lista incollata non contiene un riquadro Dati per l\'Accredito valido.');
+    queueMicrotask(aggiornaStatoWorkspace);
     return null;
   }
 
@@ -489,8 +872,10 @@ function applicaProtocolloLista(mostraErrore) {
     status.style.background = 'var(--green-soft)';
     status.style.borderLeftColor = 'var(--green)';
     status.style.color = '#234132';
-    status.innerHTML = `<b>${d.nomePg || 'PG'} · ${d.tipoPg === 'studente' ? 'Studente' : 'Adulto'}</b> — dati importati automaticamente.`;
+    const formato = Number(d.versione) === 2 ? 'V2' : 'Formato attuale';
+    status.innerHTML = `<b>${d.nomePg || 'PG'} · ${d.tipoPg === 'studente' ? 'Studente' : 'Adulto'}</b> <span class="format-tag">${formato}</span>`;
   }
+  queueMicrotask(aggiornaStatoWorkspace);
   return d;
 }
 
@@ -857,7 +1242,13 @@ function renderTrasferimentiDestinatari(trasferimenti) {
   const host = document.getElementById('trasferimenti_destinatari');
   if (!panel || !host) return;
   host.innerHTML = '';
-  if (!trasferimenti || !trasferimenti.length) { panel.style.display = 'none'; return; }
+  if (!trasferimenti || !trasferimenti.length) {
+    panel.style.display = 'none';
+    const tabBtn = document.getElementById('trasferimenti_tab_btn');
+    if (tabBtn) tabBtn.style.display = 'none';
+    if (document.getElementById('result_trasferimenti')?.classList.contains('active')) attivaTabRisultato('registro');
+    return;
+  }
 
   const gruppi = new Map();
   trasferimenti.forEach(t => {
@@ -900,6 +1291,8 @@ function renderTrasferimentiDestinatari(trasferimenti) {
     });
   });
   panel.style.display = 'block';
+  const tabBtn = document.getElementById('trasferimenti_tab_btn');
+  if (tabBtn) tabBtn.style.display = 'inline-block';
 }
 
 function parseInventarioMods(raw) {
@@ -1397,6 +1790,7 @@ function elaboraTerminale() {
 
   const risultatiPanel = document.getElementById('risultati_panel');
   if (risultatiPanel) risultatiPanel.style.display = 'block';
+  attivaTabRisultato('registro');
 
   renderTrasferimentiDestinatari(risultatoBagaglio.trasferimenti || []);
 
