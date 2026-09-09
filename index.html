@@ -259,88 +259,42 @@
         <div class="rule"></div>
     </div>
 
-    <div class="panel" id="tipo_pg_panel">
-        <h2><span class="step-num">1</span>Che tipo di PG stai accreditando?</h2>
-        <p class="step-intro">La scelta filtra automaticamente i campi.</p>
-        <div class="type-picker">
-            <label class="type-choice" for="pgStudente">
-                <input type="radio" id="pgStudente" name="tipoPg" value="studente">
-                <span class="type-choice-card"><i class="fa-solid fa-graduation-cap"></i><strong>Studente</strong><small>Mostra Box D, E e H.</small></span>
-            </label>
-            <label class="type-choice" for="pgAdulto">
-                <input type="radio" id="pgAdulto" name="tipoPg" value="adulto" checked>
-                <span class="type-choice-card"><i class="fa-solid fa-wand-magic-sparkles"></i><strong>Adulto</strong><small>Mostra Box F.</small></span>
-            </label>
-        </div>
+    <div class="panel">
+        <h2><span class="step-num">1</span>Lista della Spesa</h2>
+        <textarea id="inputComplessivoOriginale" style="min-height:210px" placeholder="Incolla qui l’intera Lista della Spesa pubblicata dal PG..."></textarea>
+        <div id="import_status" class="info-box" style="display:none; margin-top:12px;"></div>
     </div>
 
     <div class="panel">
-        <h2><span class="step-num">2</span>Dati principali</h2>
-        <div class="field-card">
-            <label for="inputComplessivo">Box A — Variazioni da applicare <span class="format-tag">principale</span></label>
-            <details class="field-help"><summary>Formato</summary><div class="guida-box"><code>+N Statistica</code> / <code>-N Statistica</code>, una voce per riga.</div></details>
-            <textarea id="inputComplessivo" placeholder="+24 Punti Post&#10;+40 Punti Casa&#10;-15 Galeoni"></textarea>
-        </div>
-
-        <div class="field-card">
-            <label for="inputScheda">Box B — Scheda Valori originale <span class="format-tag">HTML completo</span></label>
-            <textarea id="inputScheda" placeholder="Incolla qui il codice completo della Scheda Valori..."></textarea>
-        </div>
-
-        <details class="optional-group">
-            <summary>Box C — Controllo dalla Lista <span class="format-tag">opzionale</span></summary>
-            <div class="field-card compact">
-                <label for="inputComplessivoOriginale">Complessivo Accredito / intera Lista</label>
-                <details class="field-help"><summary>Funzione</summary><div class="guida-box">Confronta il Box A e, dalla Lista completa, recupera Box G e trasferimenti.</div></details>
-                <textarea id="inputComplessivoOriginale" placeholder="Incolla qui il Complessivo Accredito o l'intera Lista della Spesa..."></textarea>
-            </div>
-        </details>
+        <h2><span class="step-num">2</span>Scheda Valori</h2>
+        <textarea id="inputScheda" style="min-height:240px" placeholder="Incolla qui il codice HTML completo della Scheda Valori..."></textarea>
     </div>
 
-    <div class="panel">
-        <h2><span class="step-num">3</span>Modifiche specifiche</h2>
-        <div class="specific-grid">
-            <div class="specific-section pg-only-studente">
-                <div class="specific-section-title"><i class="fa-solid fa-book-open"></i>Piano di Studi dello Studente</div>
-                <div class="field-card">
-                    <label for="linkVoto">Box D — Link richiesta miglioramento <span class="format-tag">Studente</span></label>
-                    <details class="field-help"><summary>Formato</summary><div class="guida-box">Incolla l’URL del post senza tag <code>[URL]</code>.</div></details>
-                    <input type="text" id="linkVoto" placeholder="es. ?t=80721630#entry682188505">
-                </div>
-                <div class="field-card">
-                    <label for="modMaterie">Box E — Voti nel Piano di Studi <span class="format-tag">Studente</span></label>
-                    <details class="field-help"><summary>Formato</summary><div class="guida-box"><code>Nome Conoscenza: Voto</code> · <code>TUTTE: Materia: DaVoto &gt; AVoto</code> · <code>TUTTE: Materia: AVoto</code></div></details>
-                    <textarea id="modMaterie" style="min-height:90px" placeholder="Trasfigurazione Umana: O, Incantesimi: E"></textarea>
-                </div>
-            </div>
-
-            <div class="specific-section pg-only-adulto">
-                <div class="specific-section-title"><i class="fa-solid fa-scroll"></i>Sapienze dell'Adulto</div>
-                <div class="field-card">
-                    <label for="modSapienze">Box F — Livello Conoscenza delle Sapienze <span class="format-tag">Adulto</span></label>
-                    <details class="field-help"><summary>Formato</summary><div class="guida-box"><code>Nome Conoscenza: Livello finale</code>, più voci separate da virgole.</div></details>
-                    <input type="text" id="modSapienze" placeholder="Locomotor: 3, Amico Creature: 5">
-                </div>
-            </div>
-
-            <details class="optional-group">
-                <summary>Box G — Bagaglio <span class="format-tag">opzionale</span></summary>
-                <div class="field-card">
-                    <label for="modInventario">Movimentazione Bagaglio</label>
-                    <details class="field-help"><summary>Formati</summary><div class="guida-box"><code>Nome: ±N</code><br><code>Nome: -N — oggetto da trasferire a [URL=link]PG[/URL]</code><br><code>USI: Nome: ±N</code><br><code>NUOVO OGGETTO/POZIONE/IMMUNITA: Nome [Qta]: Descrizione</code></div></details>
-                    <textarea id="modInventario" style="min-height:105px" placeholder="Calderone Performante in Granito: -1&#10;NUOVO POZIONE: Pozione Ridente [2]: creata da PG"></textarea>
-                </div>
-            </details>
-
-            <div class="specific-section pg-only-studente">
-                <div class="specific-section-title"><i class="fa-solid fa-shield-halved"></i>Punti Casa</div>
-                <div class="field-card">
-                    <label for="inputPuntiCasaIniziali">Box H — Punti Casa attuali <span class="format-tag">Studente · opzionale</span></label>
-                    <details class="field-help"><summary>Funzione</summary><div class="guida-box">Inserisci il valore iniziale per generare <code>[X → Y]</code> nel Registro.</div></details>
-                    <input type="number" id="inputPuntiCasaIniziali" placeholder="es. 1245">
-                </div>
+    <div class="panel" id="dati_mancanti_panel" style="display:none;">
+        <h2><span class="step-num">3</span>Dati da completare</h2>
+        <div class="specific-section pg-only-studente" id="link_voto_wrap" style="display:none;">
+            <div class="specific-section-title"><i class="fa-solid fa-link"></i>Link della richiesta</div>
+            <div class="field-card">
+                <label for="linkVoto">URL del post della Lista</label>
+                <input type="text" id="linkVoto" placeholder="es. ?t=80721630#entry682188505">
             </div>
         </div>
+        <div class="specific-section pg-only-studente" id="punti_casa_wrap" style="display:none; margin-top:12px;">
+            <div class="specific-section-title"><i class="fa-solid fa-shield-halved"></i>Punti Casa</div>
+            <div class="field-card">
+                <label for="inputPuntiCasaIniziali">Valore attuale prima dell’accredito</label>
+                <input type="number" id="inputPuntiCasaIniziali" placeholder="es. 1245">
+            </div>
+        </div>
+    </div>
+
+    <div style="display:none !important;" aria-hidden="true">
+        <input type="radio" id="pgStudente" name="tipoPg" value="studente">
+        <input type="radio" id="pgAdulto" name="tipoPg" value="adulto" checked>
+        <textarea id="inputComplessivo"></textarea>
+        <textarea id="modMaterie"></textarea>
+        <input type="text" id="modSapienze">
+        <textarea id="modInventario"></textarea>
     </div>
 
     <div class="action-bar">
@@ -364,10 +318,8 @@
             </div>
         </div>
         <div id="trasferimenti_panel" style="display:none; margin-top:14px;">
-            <label for="outTrasferimenti">📦 Trasferimenti ad altri PG rilevati</label>
-            <div class="guida-box">Copia la riga <code>NUOVO ...</code> nel Box G del destinatario.</div>
-            <textarea id="outTrasferimenti" class="output-box" readonly style="min-height:120px;"></textarea>
-            <button type="button" class="btn-copia" id="btn_copia_trasferimenti" onclick="copiaCampo('outTrasferimenti','btn_copia_trasferimenti')">📋 Copia trasferimenti</button>
+            <label>📦 Trasferimenti ad altri PG</label>
+            <div id="trasferimenti_destinatari"></div>
         </div>
     </div>
 
@@ -385,6 +337,8 @@ function aggiornaTipoPGUI() {
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input[name="tipoPg"]').forEach(r => r.addEventListener('change', aggiornaTipoPGUI));
   aggiornaTipoPGUI();
+  const listaInput = document.getElementById('inputComplessivoOriginale');
+  if (listaInput) listaInput.addEventListener('input', () => applicaProtocolloLista(false));
 });
 
 function formatNumeroItaliano(num) {
@@ -437,6 +391,10 @@ function resetGeneratore() {
 
   const trasferimentiPanel = document.getElementById('trasferimenti_panel');
   if (trasferimentiPanel) trasferimentiPanel.style.display = 'none';
+  const status = document.getElementById('import_status');
+  if (status) { status.style.display = 'none'; status.innerHTML = ''; }
+  const mancanti = document.getElementById('dati_mancanti_panel');
+  if (mancanti) mancanti.style.display = 'none';
 
   tornaSu();
 }
@@ -473,6 +431,69 @@ function normalizeText(s) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+function leggiProtocolloAccrediti(raw) {
+  const testo = String(raw || '').replace(/\r/g, '');
+  const m = testo.match(/\[FF-ACCREDITI-V2\]\s*([\s\S]*?)\s*\[\/FF-ACCREDITI-V2\]/i);
+  if (!m) return { ok: false, errore: 'Blocco FF-ACCREDITI-V2 non trovato.' };
+  try {
+    const data = JSON.parse(m[1].trim());
+    if (!data || Number(data.versione) !== 2) return { ok: false, errore: 'Versione dati non valida.' };
+    if (!['studente','adulto'].includes(data.tipoPg)) return { ok: false, errore: 'Tipo PG non valido nei dati della Lista.' };
+    if (!Array.isArray(data.boxA) || !Array.isArray(data.boxE) || !Array.isArray(data.boxF) || !Array.isArray(data.boxG)) {
+      return { ok: false, errore: 'Blocco dati incompleto.' };
+    }
+    if (!Array.isArray(data.trasferimenti)) data.trasferimenti = [];
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, errore: 'Blocco dati della Lista non leggibile.' };
+  }
+}
+
+function applicaProtocolloLista(mostraErrore) {
+  const raw = document.getElementById('inputComplessivoOriginale').value || '';
+  const parsed = leggiProtocolloAccrediti(raw);
+  const status = document.getElementById('import_status');
+  const mancanti = document.getElementById('dati_mancanti_panel');
+  if (!parsed.ok) {
+    if (status) {
+      status.style.display = raw.trim() ? 'block' : 'none';
+      status.style.background = 'var(--red-soft)';
+      status.style.borderLeftColor = 'var(--red)';
+      status.style.color = '#5B2323';
+      status.innerHTML = raw.trim() ? `<b>Lista non riconosciuta.</b> ${parsed.errore}` : '';
+    }
+    if (mancanti) mancanti.style.display = 'none';
+    if (mostraErrore && raw.trim()) alert('La Lista incollata non contiene dati FF-ACCREDITI-V2 validi.');
+    return null;
+  }
+
+  const d = parsed.data;
+  document.getElementById('inputComplessivo').value = d.boxA.join('\n');
+  document.getElementById('modMaterie').value = d.boxE.join(', ');
+  document.getElementById('modSapienze').value = d.boxF.join(', ');
+  document.getElementById('modInventario').value = d.boxG.join('\n');
+  document.getElementById('pgStudente').checked = d.tipoPg === 'studente';
+  document.getElementById('pgAdulto').checked = d.tipoPg === 'adulto';
+  aggiornaTipoPGUI();
+
+  const haVoti = d.tipoPg === 'studente' && d.boxE.length > 0;
+  const haPuntiCasa = d.tipoPg === 'studente' && d.boxA.some(r => /Punti\s+Casa/i.test(r));
+  const linkWrap = document.getElementById('link_voto_wrap');
+  const casaWrap = document.getElementById('punti_casa_wrap');
+  if (linkWrap) linkWrap.style.display = haVoti ? 'block' : 'none';
+  if (casaWrap) casaWrap.style.display = haPuntiCasa ? 'block' : 'none';
+  if (mancanti) mancanti.style.display = (haVoti || haPuntiCasa) ? 'block' : 'none';
+
+  if (status) {
+    status.style.display = 'block';
+    status.style.background = 'var(--green-soft)';
+    status.style.borderLeftColor = 'var(--green)';
+    status.style.color = '#234132';
+    status.innerHTML = `<b>${d.nomePg || 'PG'} · ${d.tipoPg === 'studente' ? 'Studente' : 'Adulto'}</b> — dati importati automaticamente.`;
+  }
+  return d;
+}
+
 function splitEntries(raw) {
   return String(raw || '')
     .split(/\n|;|,(?=\s*[^,:]+:\s*)/)
@@ -587,135 +608,6 @@ function aggiornaGaleoniExtra(html, delta, baseRiferita) {
   risultato.html = html.replace(rx, `${formatNumeroItaliano(finale)}$2`);
   risultato.applicato = true;
   return risultato;
-}
-
-function patternAliases(stat) {
-  const aliases = STAT_ALIASES[stat];
-  if (!aliases || !aliases.length) return null;
-  return aliases.map(escapeRx).join('|');
-}
-function valoreConSegno(segno, valore) {
-  const n = Math.abs(toNumber(valore));
-  return segno === '-' ? -n : n;
-}
-
-function estraiDatiDaComplessivoOriginale(raw) {
-  const testoCompleto = String(raw || '').replace(/\r/g, '');
-  const deltas = {};
-  const presenti = new Set();
-  for (const stat in STAT_ALIASES) deltas[stat] = 0;
-
-  // Il Box C puo' contenere anche l'intera lista della spesa. Per evitare falsi
-  // positivi (es. "+2 Tecnica" nella descrizione di un oggetto), leggiamo SOLO
-  // il blocco finale "COMPLESSIVO ACCREDITO", se presente.
-  let text = testoCompleto;
-  const marker = /COMPLESSIVO\s+ACCREDITO/i.exec(testoCompleto);
-  if (marker) {
-    text = testoCompleto.slice(marker.index);
-    const dopoTitolo = text.replace(/^.*?COMPLESSIVO\s+ACCREDITO[^\n]*\n?/i, '');
-    const stop = dopoTitolo.search(/\n\s*<hr\s*\/?\s*>|\n\s*\[size\s*=|\n\s*#{1,6}\s+/i);
-    text = stop >= 0 ? dopoTitolo.slice(0, stop) : dopoTitolo;
-  }
-
-  const righe = text.split(/\n+/).map(r => r.trim()).filter(Boolean);
-  const trovaRiga = rx => righe.find(r => rx.test(r)) || '';
-
-  function numeroConSegno(rawNum) {
-    const m = String(rawNum || '').match(/([+-])?\s*(\d+(?:[.,]\d+)?)/);
-    if (!m) return null;
-    const n = toNumber(m[2]);
-    return m[1] === '-' ? -Math.abs(n) : Math.abs(n);
-  }
-
-  function estraiNettoDaRiga(riga, unitaRx) {
-    if (!riga) return null;
-    const eq = riga.match(new RegExp('=\\s*([+-]?\\s*\\d+(?:[.,]\\d+)?)\\s*(?:' + unitaRx + ')\\b', 'i'));
-    if (eq) return numeroConSegno(eq[1]);
-    const dopoDuePunti = riga.includes(':') ? riga.slice(riga.indexOf(':') + 1) : riga;
-    const primo = dopoDuePunti.match(new RegExp('([+-]?\\s*\\d+(?:[.,]\\d+)?)\\s*(?:' + unitaRx + ')\\b', 'i'));
-    return primo ? numeroConSegno(primo[1]) : null;
-  }
-
-  const rigaPP = trovaRiga(/Complessivo\s+PP\s+spesi\s+e\s+guadagnati\s*:/i);
-  const nettoPP = estraiNettoDaRiga(rigaPP, 'PP|Punti\\s+Post');
-  if (nettoPP !== null) { deltas['Punti Post'] = nettoPP; presenti.add('Punti Post'); }
-
-  // Galeoni: supporta sia il netto normale ("-500 G") sia la forma separata
-  // "-25 dei 100 extra, -450 di quelli in scheda".
-  const rigaG = trovaRiga(/Complessivo\s+Galeoni\s+spesi\s+e\s+guadagnati\s*:/i);
-  let extraGaleoni = 0, extraPresente = false, baseExtraRiferita = null;
-
-  if (rigaG) {
-    const mExtra = rigaG.match(/([+-])\s*(\d+(?:[.,]\d+)?)\s*(?:(?:dei|di|delle)\s+)?(\d+(?:[.,]\d+)?)?\s*extra\b/i);
-    if (mExtra) {
-      extraGaleoni = valoreConSegno(mExtra[1], mExtra[2]);
-      extraPresente = true;
-      if (mExtra[3] !== undefined) baseExtraRiferita = toNumber(mExtra[3]);
-    }
-    const mBaseExtra = rigaG.match(/(?:dei|di|delle)\s+(\d+(?:[.,]\d+)?)\s+extra\b/i);
-    if (mBaseExtra) baseExtraRiferita = toNumber(mBaseExtra[1]);
-
-    const mScheda = rigaG.match(/([+-])\s*(\d+(?:[.,]\d+)?)\s+(?:di\s+)?(?:quelli|quelle)\s+in\s+scheda\b/i);
-    if (mScheda) {
-      deltas['Galeoni'] = valoreConSegno(mScheda[1], mScheda[2]);
-      presenti.add('Galeoni');
-    } else {
-      const nettoG = estraiNettoDaRiga(rigaG, 'G|Galeon[ei]');
-      if (nettoG !== null) { deltas['Galeoni'] = nettoG; presenti.add('Galeoni'); }
-    }
-  }
-
-  const rigaCasa = trovaRiga(/Complessivo\s+Punti\s+Casa\b/i);
-  const nettoCasa = estraiNettoDaRiga(rigaCasa, 'Punti\\s+Casa');
-  if (nettoCasa !== null) { deltas['Punti Casa'] = nettoCasa; presenti.add('Punti Casa'); }
-
-  // Le altre statistiche vengono lette SOLO dalla riga "Altri punti/altro".
-  // Cosi' bonus descrittivi di oggetti, pozioni, Sapienze ecc. non diventano
-  // variazioni permanenti della Scheda Valori.
-  const rigaAltri = trovaRiga(/Altri\s+punti\s*\/\s*altro\s+guadagnati\s+o\s+persi\s*:/i);
-  if (rigaAltri) {
-    for (const stat in STAT_ALIASES) {
-      if (['Punti Post', 'Galeoni', 'Punti Casa'].includes(stat)) continue;
-      const aliases = patternAliases(stat);
-      if (!aliases) continue;
-      const rx = new RegExp('([+-])\\s*(\\d+(?:[.,]\\d+)?)\\s*(?:' + aliases + ')(?=\\s|$|[,;.)])', 'gi');
-      let m;
-      while ((m = rx.exec(rigaAltri)) !== null) { deltas[stat] += valoreConSegno(m[1], m[2]); presenti.add(stat); }
-    }
-  }
-
-  return { deltas, presenti, extraGaleoni, extraPresente, baseExtraRiferita };
-}
-
-function riconciliaVariazioniConOriginale(deltasBoxA, extraBoxA, rawOriginale) {
-  const deltas = { ...deltasBoxA };
-  let extraGaleoni = extraBoxA || 0;
-  const correzioni = [];
-  const originale = estraiDatiDaComplessivoOriginale(rawOriginale);
-
-  originale.presenti.forEach(stat => {
-    const daBox = deltas[stat] || 0;
-    const daOriginale = originale.deltas[stat] || 0;
-    if (Math.abs(daBox - daOriginale) > 1e-9) {
-      correzioni.push(
-        `${stat}: Box A ${daBox === 0 ? 'assente/0' : formatNumeroItaliano(daBox)}, ` +
-        `testo originale ${formatNumeroItaliano(daOriginale)} — usato il testo originale.`
-      );
-    }
-    deltas[stat] = daOriginale;
-  });
-
-  if (originale.extraPresente) {
-    if (Math.abs(extraGaleoni - originale.extraGaleoni) > 1e-9) {
-      correzioni.push(
-        `Galeoni Extra: Box A ${extraGaleoni === 0 ? 'assente/0' : formatNumeroItaliano(extraGaleoni)}, ` +
-        `testo originale ${formatNumeroItaliano(originale.extraGaleoni)} — usato il testo originale.`
-      );
-    }
-    extraGaleoni = originale.extraGaleoni;
-  }
-
-  return { deltas, extraGaleoni, correzioni, originale };
 }
 
 function estraiValoriInizialiScheda(html) {
@@ -944,28 +836,6 @@ const CATEGORIE_BAGAGLIO = [
   { tag: 'IMMUNITA', icona: 'fa-disease', label: 'Immunità' }
 ];
 
-function estraiBoxGDaLista(raw) {
-  const testo = String(raw || '').replace(/\r/g, '');
-  const m = testo.match(/<b>\s*BOX\s+G\s*[—–-]\s*Inventario\s*:\s*<\/b>\s*\n([\s\S]*?)(?=\n\s*<\/details>|\n\s*<b>\s*BOX\s+[A-Z]\b|$)/i);
-  return m ? m[1].trim() : '';
-}
-
-function estraiTrasferimentiDaTesto(raw) {
-  const testo = String(raw || '').replace(/\r/g, '');
-  const out = [];
-  const rx = /^\s*-?\s*(.+?)\s*:\s*-(\d+)\s*[—–-]\s*oggetto\s+da\s+trasferire\s+a\s*\[URL=([^\]]+)\](.+?)\[\/URL\]\s*$/gim;
-  let m;
-  while ((m = rx.exec(testo)) !== null) {
-    out.push({
-      name: m[1].trim(),
-      qty: parseInt(m[2], 10) || 1,
-      recipientUrl: m[3].trim(),
-      recipientName: m[4].trim()
-    });
-  }
-  return out;
-}
-
 function dedupTrasferimenti(items) {
   const seen = new Set();
   const out = [];
@@ -982,8 +852,13 @@ function pulisciTailOggettoPerTrasferimento(tail) {
   return String(tail || '').replace(/^\s*:\s*/, '').trim();
 }
 
-function costruisciOutputTrasferimenti(trasferimenti) {
-  if (!trasferimenti || !trasferimenti.length) return '';
+function renderTrasferimentiDestinatari(trasferimenti) {
+  const panel = document.getElementById('trasferimenti_panel');
+  const host = document.getElementById('trasferimenti_destinatari');
+  if (!panel || !host) return;
+  host.innerHTML = '';
+  if (!trasferimenti || !trasferimenti.length) { panel.style.display = 'none'; return; }
+
   const gruppi = new Map();
   trasferimenti.forEach(t => {
     const key = `${t.recipientUrl || ''}|${t.recipientName || ''}`;
@@ -991,19 +866,40 @@ function costruisciOutputTrasferimenti(trasferimenti) {
     gruppi.get(key).push(t);
   });
 
-  const righe = [];
+  let idx = 0;
   gruppi.forEach(items => {
+    idx++;
     const t0 = items[0];
-    righe.push(`DESTINATARIO: [URL=${t0.recipientUrl}]${t0.recipientName}[/URL]`);
-    righe.push('Righe da incollare nel Box G della sua Scheda Valori:');
-    items.forEach(t => {
-      const categoria = (t.categoria || 'OGGETTO').toUpperCase().replace('À', 'A');
-      const descrizione = pulisciTailOggettoPerTrasferimento(t.descrizione);
-      righe.push(`NUOVO ${categoria}: ${t.name} [${t.qty || 1}]: ${descrizione || 'trasferito da un altro PG'}`);
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.style.marginTop = idx === 1 ? '8px' : '12px';
+    const inId = `scheda_dest_${idx}`;
+    const outId = `scheda_dest_out_${idx}`;
+    const btnId = `copia_dest_${idx}`;
+    card.innerHTML = `
+      <div style="font-weight:800; margin-bottom:8px;">${t0.recipientName || 'Destinatario'}</div>
+      <textarea id="${inId}" style="min-height:150px;" placeholder="Incolla la Scheda Valori del destinatario..."></textarea>
+      <button type="button" class="btn-secondary" data-genera-dest="${idx}" style="margin-top:8px;">Genera scheda destinatario →</button>
+      <textarea id="${outId}" class="output-box" readonly style="display:none; min-height:180px; margin-top:10px;"></textarea>
+      <button type="button" class="btn-copia" id="${btnId}" style="display:none;" onclick="copiaCampo('${outId}','${btnId}')">📋 Copia scheda aggiornata</button>
+    `;
+    host.appendChild(card);
+    card.querySelector(`[data-genera-dest="${idx}"]`).addEventListener('click', () => {
+      const input = document.getElementById(inId).value || '';
+      if (!input.trim()) { alert('Incolla la Scheda Valori del destinatario.'); return; }
+      const righe = items.map(t => {
+        const categoria = (t.categoria || 'OGGETTO').toUpperCase().replace('À','A');
+        const descrizione = pulisciTailOggettoPerTrasferimento(t.descrizione);
+        return `NUOVO ${categoria}: ${t.name} [${t.qty || 1}]: ${descrizione || 'trasferito da un altro PG'}`;
+      }).join('\n');
+      const res = aggiornaBagaglio(input, righe, []);
+      const out = document.getElementById(outId);
+      out.value = res.html;
+      out.style.display = 'block';
+      document.getElementById(btnId).style.display = 'inline-block';
     });
-    righe.push('');
   });
-  return righe.join('\n').trim();
+  panel.style.display = 'block';
 }
 
 function parseInventarioMods(raw) {
@@ -1451,20 +1347,37 @@ function aggiornaPianoOSapienze(html) {
 }
 
 function elaboraTerminale() {
-  // Un solo documento (Scheda Valori) su cui vengono applicate in sequenza
-  // tutte le modifiche: Punti/Prestigio, fondo Extra, Bagaglio, Materie/Sapienze.
+  const protocollo = applicaProtocolloLista(true);
+  if (!protocollo) return;
   const schedaValoriHTML = document.getElementById('inputScheda').value || '';
-  const modInventarioManuale = document.getElementById('modInventario').value || '';
-  const puntiCasaIniziali = parseInt(document.getElementById('inputPuntiCasaIniziali').value, 10) || 0;
-  const rawOriginale = document.getElementById('inputComplessivoOriginale')?.value || '';
-  const boxGDaLista = estraiBoxGDaLista(rawOriginale);
-  const modInventario = modInventarioManuale.trim() ? modInventarioManuale : boxGDaLista;
-  const trasferimentiDaLista = estraiTrasferimentiDaTesto(rawOriginale);
+  if (!schedaValoriHTML.trim()) { alert('Incolla la Scheda Valori.'); return; }
 
-  const deltasBoxA = estraiDeltaDaBoxA();
-  const extraBoxA = estraiDeltaGaleoniExtraDaBoxA();
-  const riconciliati = riconciliaVariazioniConOriginale(deltasBoxA, extraBoxA, rawOriginale);
-  const deltas = riconciliati.deltas;
+  const puntiCasaRichiesti = protocollo.tipoPg === 'studente' && protocollo.boxA.some(r => /Punti\s+Casa/i.test(r));
+  if (puntiCasaRichiesti && String(document.getElementById('inputPuntiCasaIniziali').value || '').trim() === '') {
+    alert('Inserisci i Punti Casa attuali prima dell’accredito.'); return;
+  }
+  const votiRichiesti = protocollo.tipoPg === 'studente' && protocollo.boxE.length > 0;
+  if (votiRichiesti && !String(document.getElementById('linkVoto').value || '').trim()) {
+    alert('Inserisci il link del post della Lista per aggiornare lo storico dei voti.'); return;
+  }
+
+  const modInventario = document.getElementById('modInventario').value || '';
+  const puntiCasaIniziali = parseInt(document.getElementById('inputPuntiCasaIniziali').value, 10) || 0;
+  const trasferimentiDaLista = (protocollo.trasferimenti || []).map(t => ({
+    name: t.nome,
+    qty: parseInt(t.quantita, 10) || 1,
+    recipientUrl: t.destinatarioLink || '',
+    recipientName: t.destinatarioNome || ''
+  }));
+
+  const deltas = estraiDeltaDaBoxA();
+  const extraGaleoni = estraiDeltaGaleoniExtraDaBoxA();
+  const riconciliati = {
+    deltas,
+    extraGaleoni,
+    correzioni: [],
+    originale: { baseExtraRiferita: protocollo.galeoniExtraBase, extraPresente: extraGaleoni !== 0 }
+  };
 
   const dataScheda = estraiValoriInizialiScheda(schedaValoriHTML);
   const updatedValori = aggiornaSchedaConValori(schedaValoriHTML, dataScheda, deltas);
@@ -1485,34 +1398,22 @@ function elaboraTerminale() {
   const risultatiPanel = document.getElementById('risultati_panel');
   if (risultatiPanel) risultatiPanel.style.display = 'block';
 
-  const outTrasferimenti = document.getElementById('outTrasferimenti');
-  const trasferimentiPanel = document.getElementById('trasferimenti_panel');
-  const testoTrasferimenti = costruisciOutputTrasferimenti(risultatoBagaglio.trasferimenti || []);
-  if (outTrasferimenti) outTrasferimenti.value = testoTrasferimenti;
-  if (trasferimentiPanel) trasferimentiPanel.style.display = testoTrasferimenti ? 'block' : 'none';
+  renderTrasferimentiDestinatari(risultatoBagaglio.trasferimenti || []);
 
   const warnBox = document.getElementById('ignorati_box');
   if (warnBox) {
     const avvisiStat = [];
 
-    riconciliati.correzioni.forEach(msg => {
-      avvisiStat.push('<b>⚠ Controllo incrociato (Box C):</b> ' + msg);
-    });
-
-    if (!modInventarioManuale.trim() && boxGDaLista) {
-      avvisiStat.push('<b>✓ Box G recuperato automaticamente:</b> il campo Box G era vuoto, quindi sono state usate le righe presenti nel riquadro “Dati per l’Accredito” della Lista incollata nel Box C.');
-    }
-
     if (risultatoBagaglio.trasferimenti && risultatoBagaglio.trasferimenti.length) {
-      avvisiStat.push('<b>📦 Trasferimento rilevato:</b> l’oggetto è stato scalato soltanto dalla Scheda Valori del PG corrente. Le istruzioni per accreditarlo al/ai destinatario/i sono state preparate nel riquadro “Trasferimenti ad altri PG rilevati” qui sotto.');
+      avvisiStat.push('<b>📦 Trasferimento rilevato:</b> oggetto scalato dal PG corrente; accredito destinatario preparato sotto.');
     }
 
     if (updatedValori.ignorati && updatedValori.ignorati.length) {
-      avvisiStat.push('<b>⚠ Attenzione:</b> il Box A contiene ' +
+      avvisiStat.push('<b>⚠ Attenzione:</b> la Lista contiene ' +
         (updatedValori.ignorati.length > 1 ? 'queste statistiche' : 'questa statistica') +
         ' che non ' + (updatedValori.ignorati.length > 1 ? 'esistono' : 'esiste') +
-        ' in questa Scheda Valori, quindi <u>non sono state applicate</u> (né conteggiate nel registro): <b>' +
-        updatedValori.ignorati.join(', ') + '</b>. Controlla il nome della statistica o il tipo di scheda incollato in Box B.');
+        ' nella Scheda Valori e non sono state applicate: <b>' +
+        updatedValori.ignorati.join(', ') + '</b>.');
     }
 
     if (extraInfo.errore) avvisiStat.push('<b>⚠ Galeoni Extra:</b> ' + extraInfo.errore);
@@ -1524,17 +1425,17 @@ function elaboraTerminale() {
       Math.abs(riconciliati.originale.baseExtraRiferita - extraInfo.inizialeScheda) > 1e-9
     ) {
       avvisiStat.push(
-        `<b>⚠ Galeoni Extra:</b> il testo originale (Box C) indica una base di ${formatNumeroItaliano(riconciliati.originale.baseExtraRiferita)} Galeoni Extra, ` +
-        `mentre la Scheda Valori (Box B) ne contiene ${formatNumeroItaliano(extraInfo.inizialeScheda)}. ` +
-        `Per il calcolo è stata usata la base dichiarata nel Box C, ottenendo ${formatNumeroItaliano(extraInfo.finale)} Galeoni Extra finali.`
+        `<b>⚠ Galeoni Extra:</b> la Lista indica una base di ${formatNumeroItaliano(riconciliati.originale.baseExtraRiferita)} Galeoni Extra, ` +
+        `mentre la Scheda Valori ne contiene ${formatNumeroItaliano(extraInfo.inizialeScheda)}. ` +
+        `È stata usata la base della Lista, ottenendo ${formatNumeroItaliano(extraInfo.finale)} Galeoni Extra finali.`
       );
     }
 
     if (risultatoBagaglio.nonRiconosciute && risultatoBagaglio.nonRiconosciute.length) {
-      avvisiStat.push('<b>⚠ Attenzione:</b> il Box G contiene ' +
+      avvisiStat.push('<b>⚠ Attenzione:</b> il Bagaglio della Lista contiene ' +
         (risultatoBagaglio.nonRiconosciute.length > 1 ? 'queste righe' : 'questa riga') +
         ' che non ' + (risultatoBagaglio.nonRiconosciute.length > 1 ? 'corrispondono' : 'corrisponde') +
-        ' a nessuna sintassi valida, quindi <u>non ' + (risultatoBagaglio.nonRiconosciute.length > 1 ? 'sono state applicate' : 'è stata applicata') + '</u>: <b>' +
+        ' al formato previsto, quindi <u>non ' + (risultatoBagaglio.nonRiconosciute.length > 1 ? 'sono state applicate' : 'è stata applicata') + '</u>: <b>' +
         risultatoBagaglio.nonRiconosciute.map(r => r.replace(/</g, '&lt;')).join('</b>, <b>') + '</b>.');
     }
 
