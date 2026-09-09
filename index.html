@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Generatore Accrediti — Scheda Valori</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -165,106 +166,209 @@
             background: var(--amber-soft); color: var(--gold-deep); padding: 2px 8px; border-radius: 999px;
             letter-spacing: .01em; margin-left: 8px; vertical-align: middle; white-space: nowrap; border: 1px solid var(--gold-soft);
         }
+
+
+        /* =========================================================
+           UX/UI v3 — interfaccia progressiva + filtro tipo PG
+           ========================================================= */
+        body {
+            background:
+                radial-gradient(circle at 10% -5%, rgba(196,154,75,.16), transparent 32%),
+                radial-gradient(circle at 93% 8%, rgba(69,91,72,.08), transparent 28%),
+                linear-gradient(180deg, #F1E8D4 0%, #E9DDC1 100%);
+            background-attachment: fixed;
+            padding: 22px 18px 64px;
+        }
+        .container { max-width: 1160px; gap: 16px; }
+        .masthead {
+            position: relative; overflow: hidden; padding: 24px 22px 22px; margin-bottom: 0;
+            border-radius: 20px; border: 1px solid rgba(195,157,88,.48);
+            background: linear-gradient(145deg, #362A3E 0%, #261E2D 58%, #201923 100%);
+            box-shadow: 0 18px 38px rgba(43,34,51,.17), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .masthead::before, .masthead::after { content:""; position:absolute; pointer-events:none; border-radius:50%; border:1px solid rgba(224,199,142,.08); }
+        .masthead::before { width:250px; height:250px; left:-145px; top:-170px; }
+        .masthead::after { width:310px; height:310px; right:-185px; bottom:-245px; }
+        .masthead h1 { color:#F6E8BF; font-size:clamp(27px,4vw,36px); text-shadow:0 3px 16px rgba(0,0,0,.28); }
+        .masthead .eyebrow { color:#DCC38B; text-transform:uppercase; letter-spacing:.11em; font-size:12px; }
+        .masthead .rule::after { background:#261E2D; color:#D7B66C; }
+        .masthead-subtitle { margin:9px auto 0; max-width:680px; color:#D9CFC0; font-size:13px; }
+        .top-note { margin:0; border-radius:12px; border-left-width:4px; box-shadow:0 7px 18px rgba(55,42,31,.05); }
+        .panel { padding:22px 24px; border-radius:16px; border-color:rgba(184,156,101,.38); background:linear-gradient(180deg, rgba(255,252,244,.98), rgba(248,241,226,.98)); box-shadow:0 10px 26px rgba(55,42,31,.07), inset 0 1px 0 rgba(255,255,255,.75); }
+        .panel h2 { border-bottom:0; padding-bottom:0; margin-bottom:6px; font-size:23px; }
+        .step-intro { margin:0 0 17px; color:#746A78; font-size:12.5px; }
+        .step-num { background:linear-gradient(145deg,#B6853D,#81571F); box-shadow:0 3px 8px rgba(122,81,25,.22); }
+        .type-picker { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:15px; }
+        .type-choice { position:relative; display:block; margin:0; cursor:pointer; }
+        .type-choice input { position:absolute; opacity:0; pointer-events:none; }
+        .type-choice-card { min-height:90px; display:grid; grid-template-columns:42px 1fr; grid-template-rows:auto auto; column-gap:12px; align-items:center; padding:15px 16px; border-radius:14px; border:1px solid rgba(156,107,36,.28); background:rgba(255,255,255,.76); box-shadow:0 6px 16px rgba(55,42,31,.045); transition:.15s ease; }
+        .type-choice-card i { grid-row:1 / span 2; width:42px; height:42px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:#F2E6CB; color:var(--gold-deep); font-size:17px; }
+        .type-choice-card strong { color:var(--ink); font-size:14.5px; }
+        .type-choice-card small { color:var(--ink-soft); font-size:11.5px; font-weight:500; line-height:1.35; }
+        .type-choice:hover .type-choice-card { transform:translateY(-1px); border-color:rgba(156,107,36,.55); }
+        .type-choice input:checked + .type-choice-card { color:#FFF7E5; border-color:rgba(224,199,142,.42); background:linear-gradient(145deg,#4A394F,#2A2131); box-shadow:0 9px 20px rgba(46,36,55,.20); }
+        .type-choice input:checked + .type-choice-card strong { color:#FFF4D8; }
+        .type-choice input:checked + .type-choice-card small { color:#DED1C1; }
+        .type-choice input:checked + .type-choice-card i { background:rgba(216,192,138,.15); color:#E5C982; }
+        .type-context { margin-top:11px; padding:10px 12px; border-radius:9px; background:#F7ECD3; color:#684D1D; font-size:12px; }
+        .field-card { padding:15px 16px; margin-top:12px; border:1px solid rgba(184,156,101,.30); border-radius:12px; background:rgba(255,255,255,.55); }
+        .field-card:first-of-type { margin-top:0; }
+        .field-card label { margin-top:0; color:#514859; font-size:13px; }
+        .field-card textarea { min-height:120px; }
+        .field-card.compact textarea { min-height:88px; }
+        .field-card input { min-height:42px; }
+        .field-help { margin:8px 0 10px; border:0; }
+        .field-help summary { display:inline-flex; align-items:center; gap:6px; cursor:pointer; color:var(--gold-deep); font-size:11.5px; font-weight:700; user-select:none; list-style:none; }
+        .field-help summary::-webkit-details-marker { display:none; }
+        .field-help summary::before { content:"＋"; width:17px; height:17px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#F2E6CB; font-size:11px; }
+        .field-help[open] summary::before { content:"−"; }
+        .field-help .guida-box { margin:8px 0 0; font-size:12px; padding:10px 12px; }
+        .optional-group { margin-top:12px; border:1px dashed rgba(156,107,36,.35); border-radius:12px; background:rgba(255,255,255,.28); }
+        .optional-group > summary { cursor:pointer; list-style:none; padding:13px 15px; color:var(--gold-deep); font-weight:800; font-size:12.5px; }
+        .optional-group > summary::-webkit-details-marker { display:none; }
+        .optional-group > summary::before { content:"▸"; margin-right:8px; }
+        .optional-group[open] > summary::before { content:"▾"; }
+        .optional-group .field-card { margin:0 12px 12px; }
+        .specific-grid { display:grid; grid-template-columns:1fr; gap:12px; }
+        .specific-section { padding:14px 15px; border-radius:12px; border:1px solid rgba(184,156,101,.30); background:rgba(255,255,255,.52); }
+        .specific-section-title { display:flex; align-items:center; gap:9px; margin-bottom:3px; color:var(--ink); font-weight:800; font-size:13.5px; }
+        .specific-section-title i { color:var(--gold-deep); width:20px; text-align:center; }
+        .specific-section-sub { color:var(--ink-soft); font-size:11.5px; margin-bottom:10px; }
+        .specific-section .field-card { padding:12px 0 0; margin-top:10px; border:0; border-top:1px solid rgba(184,156,101,.22); border-radius:0; background:transparent; }
+        .specific-section .field-card:first-of-type { border-top:0; padding-top:0; margin-top:0; }
+        .pg-hidden { display:none !important; }
+        .action-bar { position:sticky; bottom:10px; z-index:40; display:flex; gap:10px; padding:10px; border:1px solid rgba(156,107,36,.26); border-radius:14px; background:rgba(248,241,226,.90); backdrop-filter:blur(10px); box-shadow:0 10px 25px rgba(55,42,31,.12); }
+        .action-bar button { min-height:48px; }
+        .action-primary { flex:2; }
+        .action-reset { flex:1; }
+        #risultati_panel { scroll-margin-top:18px; }
+        .results-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .result-card { padding:14px; border-radius:12px; border:1px solid rgba(184,156,101,.30); background:rgba(255,255,255,.52); }
+        .result-card label { margin-top:0; }
+        .result-card textarea { min-height:230px; }
+        #trasferimenti_panel { padding:14px; border-radius:12px; border:1px solid rgba(156,107,36,.28); background:#FBF0D9; }
+        @media (max-width:760px) { body { padding:12px 9px 48px; } .masthead { border-radius:16px; padding:20px 14px; } .panel { padding:17px 14px; border-radius:13px; } .type-picker, .results-grid { grid-template-columns:1fr; } .action-bar { bottom:6px; } .action-bar button { padding:12px 10px; font-size:13px; } }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="masthead">
-                <h1>Generatore Accrediti — Scheda Valori</h1>
+        <span class="eyebrow">Felix Felicis GDR · Staff</span>
+        <h1>Generatore Accrediti</h1>
         <div class="rule"></div>
     </div>
-    <div class="info-box">
-        Questo strumento lavora esclusivamente sulla <strong>Scheda Valori</strong> del PG (Punti, Sapienze/Piano di Studi, Bagaglio, Conoscenze).
-        La Scheda Biografica non è coinvolta in nessun modo: non va incollata qui e non viene mai modificata da questo strumento.
+
+    <div class="panel" id="tipo_pg_panel">
+        <h2><span class="step-num">1</span>Che tipo di PG stai accreditando?</h2>
+        <p class="step-intro">La scelta filtra automaticamente i campi.</p>
+        <div class="type-picker">
+            <label class="type-choice" for="pgStudente">
+                <input type="radio" id="pgStudente" name="tipoPg" value="studente">
+                <span class="type-choice-card"><i class="fa-solid fa-graduation-cap"></i><strong>Studente</strong><small>Mostra Box D, E e H.</small></span>
+            </label>
+            <label class="type-choice" for="pgAdulto">
+                <input type="radio" id="pgAdulto" name="tipoPg" value="adulto" checked>
+                <span class="type-choice-card"><i class="fa-solid fa-wand-magic-sparkles"></i><strong>Adulto</strong><small>Mostra Box F.</small></span>
+            </label>
+        </div>
     </div>
 
     <div class="panel">
-        <h2><span class="step-num">1</span>Selezione PG &amp; Parametri Sociali/Economiche</h2>
-        <div class="radio-group">
-            <label style="display:inline; margin-right:20px; color:#2d3748;">Tipo di Personaggio:</label>
-            <input type="radio" id="pgStudente" name="tipoPg" value="studente"> <label for="pgStudente" style="display:inline; font-weight:normal; margin-right:20px;">Studente</label>
-            <input type="radio" id="pgAdulto" name="tipoPg" value="adulto" checked=""> <label for="pgAdulto" style="display:inline; font-weight:normal;">Adulto</label>
+        <h2><span class="step-num">2</span>Dati principali</h2>
+        <div class="field-card">
+            <label for="inputComplessivo">Box A — Variazioni da applicare <span class="format-tag">principale</span></label>
+            <details class="field-help"><summary>Formato</summary><div class="guida-box"><code>+N Statistica</code> / <code>-N Statistica</code>, una voce per riga.</div></details>
+            <textarea id="inputComplessivo" placeholder="+24 Punti Post&#10;+40 Punti Casa&#10;-15 Galeoni"></textarea>
         </div>
 
-        <label for="inputComplessivo">Box A — Elenco Variazioni (Punti/Galeoni/Casa) <span class="format-tag">una riga per voce</span></label>
-        <div class="guida-box">
-            <strong>FORMATO ESATTO RICHIESTO, una voce per riga:</strong><br>
-            <code>+N Nome Statistica</code> oppure <code>-N Nome Statistica</code> — segno, numero (usa la virgola per i decimali, es. <code>24,5</code>), uno spazio, il nome della statistica per esteso.<br><br>
-            <strong>Nomi statistica riconosciuti:</strong> Punti Post, Galeoni, Punti Casa, Dialettica, Popolarità, Stima Docenti, Bontà, Malvagità, Virtuoso, Sinistro, Prestigio, Acume, Empatia, Percezione, Potenza, Tecnica, Volontà, Destrezza, Fatica, Resistenza, Salute.<br>
-            Una statistica assente dal nome esatto elencato sopra, o assente dalla Scheda Valori incollata in Box B, viene segnalata come non applicata invece di essere ignorata in silenzio.<br>
-            Per il fondo <b>Galeoni Extra</b> (i 100 Galeoni una tantum spendibili solo per Eventi/Role a pagamento), usa <code>+N Galeoni Extra</code> o <code>-N Galeoni Extra</code>: viene gestito separatamente e non si somma ai Galeoni normali.<br><br>
-            Esempio: <code>+24 Punti Post</code> ↵ <code>+40 Punti Casa</code> ↵ <code>-15 Galeoni</code>
+        <div class="field-card">
+            <label for="inputScheda">Box B — Scheda Valori originale <span class="format-tag">HTML completo</span></label>
+            <textarea id="inputScheda" placeholder="Incolla qui il codice completo della Scheda Valori..."></textarea>
         </div>
-        <textarea id="inputComplessivo" placeholder="+24 Punti Post&#10;+40 Punti Casa&#10;+15 Galeoni"></textarea>
 
-        <label for="inputScheda">Box B — Codice Scheda Valori Originale <span class="format-tag">HTML completo</span></label>
-        <div class="guida-box"><strong>COSA INSERIRE:</strong> Apri il messaggio della Scheda Valori del PG in modalità "Modifica", seleziona TUTTO il codice HTML (dall'apertura del primo <code>&lt;div&gt;</code> alla chiusura dell'ultimo), copialo e incollalo qui integralmente, senza tagli. Da questo unico blocco il tool legge e aggiorna Parametri Sociali/Magici/Fisici, Prestigio, Punti Post, Galeoni, fondo Galeoni Extra, Inventario, voti/materie o livelli di Sapienza. <strong>Non</strong> incollare qui la Scheda Biografica: non serve e non verrà toccata.</div>
-        <textarea id="inputScheda"></textarea>
-
-        <label for="inputComplessivoOriginale">Box C — Testo originale "Complessivo Accredito" <span class="format-tag">opzionale · controllo incrociato</span></label>
-        <div class="guida-box"><strong>COSA INSERIRE:</strong> Puoi incollare qui il solo blocco <code>COMPLESSIVO ACCREDITO</code> oppure anche l'intera Lista della Spesa: il generatore isola automaticamente il riepilogo finale e ignora bonus descrittivi di oggetti/Sapienze. Lo confronta con il Box A e, quando trova una differenza inequivocabile, usa il riepilogo finale come fonte prioritaria — segnalando comunque ogni discrepanza nei risultati. Riconosce anche formule come <code>-25 dei 100 extra, -450 di quelli in scheda</code>: il primo valore modifica il fondo Extra, il secondo i Galeoni normali.</div>
-        <textarea id="inputComplessivoOriginale" style="min-height:110px" placeholder="COMPLESSIVO ACCREDITO&#10;Complessivo PP spesi e guadagnati: +34,5 PP&#10;Complessivo Galeoni spesi e guadagnati: -25 dei 100 extra, -450 di quelli in scheda&#10;Altri punti/altro guadagnati o persi: +2 Prestigio +1,5 Sinistro"></textarea>
-    </div>
-
-    <div class="panel">
-        <h2><span class="step-num">2</span>Modifiche Specifiche (Conoscenze del Piano di Studi, Sapienze e Inventario)</h2>
-        <div class="grid-2">
-            <div>
-                <label for="linkVoto">Box D — URL di richiesta miglioramento <span class="format-tag">solo voti Studenti · un link</span></label>
-                <div class="guida-box"><strong>COSA INSERIRE:</strong> Incolla il link (URL) del post in cui il giocatore ha chiesto la modifica, così com'è, senza tag <code>[URL]</code> attorno. Serve per creare il link "sbarrato" <code>&lt;del&gt;</code> richiesto dal regolamento sui <strong>voti degli Studenti (Box E)</strong>. Le Sapienze degli Adulti (Box F) non usano questo link: il livello viene aggiornato senza storico sbarrato.</div>
-                <input type="text" id="linkVoto" placeholder="es: ?t=80721630#entry682188505">
-
-                <label for="modMaterie">Box E — Voti nelle Conoscenze del Piano di Studi <span class="format-tag">solo Studenti · separato da virgole</span></label>
-                <div class="guida-box">
-                <strong>FORMATO ESATTO, voci separate da virgola:</strong><br>
-                Singola Conoscenza: <code>Nome Conoscenza: NuovoVoto</code><br>
-                Esempio: <code>Trasfigurazione Umana: O, Incantesimi: E</code><br><br>
-                Tutte le Conoscenze di una Materia: <code>TUTTE: Nome Materia: DaVoto &gt; AVoto</code> oppure, se il voto di partenza non è uniforme, <code>TUTTE: Nome Materia: AVoto</code><br>
-                Esempio: <code>TUTTE: Trasfigurazione: T &gt; D</code> (tutte passano da T a D) — oppure <code>TUTTE: Trasfigurazione: D</code> (tutte portate a D, qualsiasi fosse il voto precedente)<br><br>
-                I voti validi sono le sole lettere T · D · S · A · O · E.
-                </div>
-                <textarea id="modMaterie" style="min-height:90px" placeholder="Trasfigurazione Umana: O, Incantesimi: E"></textarea>
+        <details class="optional-group">
+            <summary>Box C — Controllo dalla Lista <span class="format-tag">opzionale</span></summary>
+            <div class="field-card compact">
+                <label for="inputComplessivoOriginale">Complessivo Accredito / intera Lista</label>
+                <details class="field-help"><summary>Funzione</summary><div class="guida-box">Confronta il Box A e, dalla Lista completa, recupera Box G e trasferimenti.</div></details>
+                <textarea id="inputComplessivoOriginale" placeholder="Incolla qui il Complessivo Accredito o l'intera Lista della Spesa..."></textarea>
             </div>
-            <div>
-                <label for="modSapienze">Box F — Livello Conoscenza delle Sapienze <span class="format-tag">solo Adulti · separato da virgole</span></label>
-                <div class="guida-box"><strong>FORMATO ESATTO, voci separate da virgola:</strong> <code>Nome Conoscenza: NuovoLivello</code> — il livello è il numero finale (di partenza + acquistato), non solo l'incremento.<br>Esempio: <code>Locomotor: 3, Amico Creature: 5</code></div>
-                <input type="text" id="modSapienze">
-
-                <label for="modInventario">Box G — Movimentazione Oggetti nel Bagaglio <span class="format-tag">una voce per riga</span></label>
-                <div class="guida-box">
-                <strong>FORMATO ESATTO, una voce per riga (non per virgola: i nomi oggetto possono contenerne una):</strong><br>
-                <code>Nome Oggetto: +2</code> o <code>Nome Oggetto: -1</code> — variazione di quantità su un oggetto/pozione/immunità già presente in scheda (cerca automaticamente in tutte e tre le sezioni).<br>
-                <code>USI: Nome Oggetto: +1</code> — variazione degli usi consumati su un oggetto esistente.<br>
-                <code>NUOVO OGGETTO: Nome [Quantità]: Descrizione</code> — aggiunge alla sezione <b>Oggetti</b> della scheda.<br>
-                <code>NUOVO POZIONE: Nome [Quantità]: Descrizione</code> — aggiunge alla sezione <b>Pozioni</b>.<br>
-                <code>NUOVO IMMUNITA: Nome [Quantità]: Descrizione</code> — aggiunge alla sezione <b>Immunità</b>.<br>
-                In tutti i casi "NUOVO ...": aggiunge l'elemento se non esiste, oppure ne incrementa la quantità se esiste già nella sezione indicata (sempre sicuro da usare per acquisti/creazioni). <code>NUOVO:</code> senza categoria resta valido per compatibilità e va nella sezione Oggetti.<br>
-                <span class="format-tag">I Premi Fanta Felix Felicis sono una sezione a parte e non sono gestiti da questo Box.</span>
-                </div>
-                <textarea id="modInventario" style="min-height:110px" placeholder="Calderone Performante in Granito: +1&#10;NUOVO POZIONE: Pozione Ridente [2]: creata da PG&#10;NUOVO IMMUNITA: Immunità al Veleno [1]: resistenza permanente"></textarea>
-            </div>
-        </div>
-        <label for="inputPuntiCasaIniziali">Box H — Punti Casa attuali <span class="format-tag">un numero, opzionale</span></label>
-        <div class="guida-box"><strong>COSA INSERIRE:</strong> Il punteggio esatto della Casa PRIMA di aggiungere quelli del Box A (solo un numero, es. <code>1245</code>). Serve per generare il calcolo [X ➔ Y] nel registro; se lasciato vuoto, la riga Punti Casa non compare nel registro.</div>
-        <input type="number" id="inputPuntiCasaIniziali">
-    </div>
-
-    <div class="btn-row">
-        <button onclick="elaboraTerminale()">Genera risultati</button>
-        <button type="button" class="btn-danger" onclick="resetGeneratore()">🗑️ Cancella tutto</button>
+        </details>
     </div>
 
     <div class="panel">
-        <h2><span class="step-num">3</span>Risultati Finali</h2>
+        <h2><span class="step-num">3</span>Modifiche specifiche</h2>
+        <div class="specific-grid">
+            <div class="specific-section pg-only-studente">
+                <div class="specific-section-title"><i class="fa-solid fa-book-open"></i>Piano di Studi dello Studente</div>
+                <div class="field-card">
+                    <label for="linkVoto">Box D — Link richiesta miglioramento <span class="format-tag">Studente</span></label>
+                    <details class="field-help"><summary>Formato</summary><div class="guida-box">Incolla l’URL del post senza tag <code>[URL]</code>.</div></details>
+                    <input type="text" id="linkVoto" placeholder="es. ?t=80721630#entry682188505">
+                </div>
+                <div class="field-card">
+                    <label for="modMaterie">Box E — Voti nel Piano di Studi <span class="format-tag">Studente</span></label>
+                    <details class="field-help"><summary>Formato</summary><div class="guida-box"><code>Nome Conoscenza: Voto</code> · <code>TUTTE: Materia: DaVoto &gt; AVoto</code> · <code>TUTTE: Materia: AVoto</code></div></details>
+                    <textarea id="modMaterie" style="min-height:90px" placeholder="Trasfigurazione Umana: O, Incantesimi: E"></textarea>
+                </div>
+            </div>
+
+            <div class="specific-section pg-only-adulto">
+                <div class="specific-section-title"><i class="fa-solid fa-scroll"></i>Sapienze dell'Adulto</div>
+                <div class="field-card">
+                    <label for="modSapienze">Box F — Livello Conoscenza delle Sapienze <span class="format-tag">Adulto</span></label>
+                    <details class="field-help"><summary>Formato</summary><div class="guida-box"><code>Nome Conoscenza: Livello finale</code>, più voci separate da virgole.</div></details>
+                    <input type="text" id="modSapienze" placeholder="Locomotor: 3, Amico Creature: 5">
+                </div>
+            </div>
+
+            <details class="optional-group">
+                <summary>Box G — Bagaglio <span class="format-tag">opzionale</span></summary>
+                <div class="field-card">
+                    <label for="modInventario">Movimentazione Bagaglio</label>
+                    <details class="field-help"><summary>Formati</summary><div class="guida-box"><code>Nome: ±N</code><br><code>Nome: -N — oggetto da trasferire a [URL=link]PG[/URL]</code><br><code>USI: Nome: ±N</code><br><code>NUOVO OGGETTO/POZIONE/IMMUNITA: Nome [Qta]: Descrizione</code></div></details>
+                    <textarea id="modInventario" style="min-height:105px" placeholder="Calderone Performante in Granito: -1&#10;NUOVO POZIONE: Pozione Ridente [2]: creata da PG"></textarea>
+                </div>
+            </details>
+
+            <div class="specific-section pg-only-studente">
+                <div class="specific-section-title"><i class="fa-solid fa-shield-halved"></i>Punti Casa</div>
+                <div class="field-card">
+                    <label for="inputPuntiCasaIniziali">Box H — Punti Casa attuali <span class="format-tag">Studente · opzionale</span></label>
+                    <details class="field-help"><summary>Funzione</summary><div class="guida-box">Inserisci il valore iniziale per generare <code>[X → Y]</code> nel Registro.</div></details>
+                    <input type="number" id="inputPuntiCasaIniziali" placeholder="es. 1245">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <button class="action-primary" onclick="elaboraTerminale()">Genera risultati →</button>
+        <button type="button" class="btn-danger action-reset" onclick="resetGeneratore()">Cancella tutto</button>
+    </div>
+
+    <div class="panel" id="risultati_panel" style="display:none;">
+        <h2><span class="step-num">4</span>Risultati finali</h2>
         <div id="ignorati_box" class="warn-box"></div>
-        <label for="outForum">Risultato per il Registro Accrediti (copia e incolla sul forum):</label>
-        <textarea id="outForum" class="output-box" readonly=""></textarea>
-        <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')">📋 Copia registro</button>
-
-        <label for="outScheda">Nuovo Codice Scheda Valori (Aggiornato — Punti, Sapienze/Studi, Bagaglio, Conoscenze):</label>
-        <textarea id="outScheda" class="output-box" readonly=""></textarea>
-        <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')">📋 Copia scheda aggiornata</button>
+        <div class="results-grid">
+            <div class="result-card">
+                <label for="outForum">Registro Accrediti</label>
+                <textarea id="outForum" class="output-box" readonly></textarea>
+                <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')">📋 Copia registro</button>
+            </div>
+            <div class="result-card">
+                <label for="outScheda">Scheda Valori aggiornata</label>
+                <textarea id="outScheda" class="output-box" readonly></textarea>
+                <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')">📋 Copia scheda aggiornata</button>
+            </div>
+        </div>
+        <div id="trasferimenti_panel" style="display:none; margin-top:14px;">
+            <label for="outTrasferimenti">📦 Trasferimenti ad altri PG rilevati</label>
+            <div class="guida-box">Copia la riga <code>NUOVO ...</code> nel Box G del destinatario.</div>
+            <textarea id="outTrasferimenti" class="output-box" readonly style="min-height:120px;"></textarea>
+            <button type="button" class="btn-copia" id="btn_copia_trasferimenti" onclick="copiaCampo('outTrasferimenti','btn_copia_trasferimenti')">📋 Copia trasferimenti</button>
+        </div>
     </div>
 
     <button type="button" class="btn-torna-su" onclick="tornaSu()" title="Torna su">⬆️</button>
@@ -272,6 +376,17 @@
 </div>
 
 <script>
+function aggiornaTipoPGUI() {
+  const tipo = document.querySelector('input[name="tipoPg"]:checked')?.value || 'adulto';
+  document.querySelectorAll('.pg-only-studente').forEach(el => el.classList.toggle('pg-hidden', tipo !== 'studente'));
+  document.querySelectorAll('.pg-only-adulto').forEach(el => el.classList.toggle('pg-hidden', tipo !== 'adulto'));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('input[name="tipoPg"]').forEach(r => r.addEventListener('change', aggiornaTipoPGUI));
+  aggiornaTipoPGUI();
+});
+
 function formatNumeroItaliano(num) {
   const n = Number(num);
   if (Number.isInteger(n)) return String(n);
@@ -309,12 +424,19 @@ function resetGeneratore() {
   const adulto = document.getElementById('pgAdulto');
   if (studente) studente.checked = false;
   if (adulto) adulto.checked = true;
+  aggiornaTipoPGUI();
+
+  const risultatiPanel = document.getElementById('risultati_panel');
+  if (risultatiPanel) risultatiPanel.style.display = 'none';
 
   const warnBox = document.getElementById('ignorati_box');
   if (warnBox) {
     warnBox.classList.remove('show');
     warnBox.innerHTML = '';
   }
+
+  const trasferimentiPanel = document.getElementById('trasferimenti_panel');
+  if (trasferimentiPanel) trasferimentiPanel.style.display = 'none';
 
   tornaSu();
 }
@@ -822,45 +944,127 @@ const CATEGORIE_BAGAGLIO = [
   { tag: 'IMMUNITA', icona: 'fa-disease', label: 'Immunità' }
 ];
 
+function estraiBoxGDaLista(raw) {
+  const testo = String(raw || '').replace(/\r/g, '');
+  const m = testo.match(/<b>\s*BOX\s+G\s*[—–-]\s*Inventario\s*:\s*<\/b>\s*\n([\s\S]*?)(?=\n\s*<\/details>|\n\s*<b>\s*BOX\s+[A-Z]\b|$)/i);
+  return m ? m[1].trim() : '';
+}
+
+function estraiTrasferimentiDaTesto(raw) {
+  const testo = String(raw || '').replace(/\r/g, '');
+  const out = [];
+  const rx = /^\s*-?\s*(.+?)\s*:\s*-(\d+)\s*[—–-]\s*oggetto\s+da\s+trasferire\s+a\s*\[URL=([^\]]+)\](.+?)\[\/URL\]\s*$/gim;
+  let m;
+  while ((m = rx.exec(testo)) !== null) {
+    out.push({
+      name: m[1].trim(),
+      qty: parseInt(m[2], 10) || 1,
+      recipientUrl: m[3].trim(),
+      recipientName: m[4].trim()
+    });
+  }
+  return out;
+}
+
+function dedupTrasferimenti(items) {
+  const seen = new Set();
+  const out = [];
+  (items || []).forEach(t => {
+    const key = [normalizeText(t.name), t.qty || 1, normalizeText(t.recipientName), String(t.recipientUrl || '').trim()].join('|');
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ ...t });
+  });
+  return out;
+}
+
+function pulisciTailOggettoPerTrasferimento(tail) {
+  return String(tail || '').replace(/^\s*:\s*/, '').trim();
+}
+
+function costruisciOutputTrasferimenti(trasferimenti) {
+  if (!trasferimenti || !trasferimenti.length) return '';
+  const gruppi = new Map();
+  trasferimenti.forEach(t => {
+    const key = `${t.recipientUrl || ''}|${t.recipientName || ''}`;
+    if (!gruppi.has(key)) gruppi.set(key, []);
+    gruppi.get(key).push(t);
+  });
+
+  const righe = [];
+  gruppi.forEach(items => {
+    const t0 = items[0];
+    righe.push(`DESTINATARIO: [URL=${t0.recipientUrl}]${t0.recipientName}[/URL]`);
+    righe.push('Righe da incollare nel Box G della sua Scheda Valori:');
+    items.forEach(t => {
+      const categoria = (t.categoria || 'OGGETTO').toUpperCase().replace('À', 'A');
+      const descrizione = pulisciTailOggettoPerTrasferimento(t.descrizione);
+      righe.push(`NUOVO ${categoria}: ${t.name} [${t.qty || 1}]: ${descrizione || 'trasferito da un altro PG'}`);
+    });
+    righe.push('');
+  });
+  return righe.join('\n').trim();
+}
+
 function parseInventarioMods(raw) {
   const ops = [];
   const nonRiconosciute = [];
-  for (const entry of splitEntriesInventario(raw)) {
+  const trasferimenti = [];
+  for (const entryRaw of splitEntriesInventario(raw)) {
+    const entry = entryRaw.trim();
+
+    // Nuovo formato Lista della Spesa: accettiamo sia la riga narrativa completa
+    // (con eventuale "-" iniziale) sia il Box G compatto. La parte destinatario
+    // non cambia la scheda corrente: serve per preparare l'accredito al ricevente.
+    let m = entry.match(/^\s*-?\s*(.+?)\s*:\s*-(\d+)\s*[—–-]\s*oggetto\s+da\s+trasferire\s+a\s*\[URL=([^\]]+)\](.+?)\[\/URL\]\s*$/i);
+    if (m) {
+      const t = {
+        name: m[1].trim(),
+        qty: parseInt(m[2], 10) || 1,
+        recipientUrl: m[3].trim(),
+        recipientName: m[4].trim()
+      };
+      trasferimenti.push(t);
+      ops.push({ type: 'qty', name: t.name, delta: -t.qty, transferKey: trasferimenti.length - 1 });
+      continue;
+    }
+
+    // Il trattino iniziale del post narrativo non fa parte del nome dell'oggetto.
+    const entryPulita = entry.replace(/^\s*-\s+/, '');
+
     // "NUOVO:" da solo resta Oggetto per compatibilita' con le richieste gia'
     // scritte prima che categoria diventasse obbligatoria; "NUOVO OGGETTO/POZIONE/IMMUNITA:"
     // specifica esplicitamente in quale sezione della scheda va inserito.
-    const mNuovoCat = entry.match(/^NUOVO\s+(OGGETTO|POZIONE|IMMUNIT[AÀ])\s*:\s*(.+?)\s*\[(\d+)\]\s*:\s*(.*)$/i);
+    const mNuovoCat = entryPulita.match(/^NUOVO\s+(OGGETTO|POZIONE|IMMUNIT[AÀ])\s*:\s*(.+?)\s*\[(\d+)\]\s*:\s*(.*)$/i);
     if (mNuovoCat) {
       const categoria = mNuovoCat[1].toUpperCase().replace('À', 'A');
       ops.push({ type: 'new', categoria, name: mNuovoCat[2].trim(), qty: parseInt(mNuovoCat[3], 10) || 1, desc: mNuovoCat[4].trim() });
       continue;
     }
-    if (/^NUOVO\s*:/i.test(entry)) {
-      const m = entry.match(/^NUOVO\s*:\s*(.+?)\s*\[(\d+)\]\s*:\s*(.*)$/i);
-      if (m) { ops.push({ type: 'new', categoria: 'OGGETTO', name: m[1].trim(), qty: parseInt(m[2], 10) || 1, desc: m[3].trim() }); continue; }
-      nonRiconosciute.push(entry);
+    if (/^NUOVO\s*:/i.test(entryPulita)) {
+      const mLegacy = entryPulita.match(/^NUOVO\s*:\s*(.+?)\s*\[(\d+)\]\s*:\s*(.*)$/i);
+      if (mLegacy) { ops.push({ type: 'new', categoria: 'OGGETTO', name: mLegacy[1].trim(), qty: parseInt(mLegacy[2], 10) || 1, desc: mLegacy[3].trim() }); continue; }
+      nonRiconosciute.push(entryRaw);
       continue;
     }
-    if (/^NUOVO\s+/i.test(entry)) {
-      // "NUOVO Categoria:" con categoria non riconosciuta, o sintassi [Qty] mancante/malformata
-      nonRiconosciute.push(entry);
+    if (/^NUOVO\s+/i.test(entryPulita)) {
+      nonRiconosciute.push(entryRaw);
       continue;
     }
 
-    let m = entry.match(/^USI\s*:\s*(.+?)\s*:\s*([+-]?\d+)$/i);
+    m = entryPulita.match(/^USI\s*:\s*(.+?)\s*:\s*([+-]?\d+)$/i);
     if (m) {
       ops.push({ type: 'uses', name: m[1].trim(), delta: parseInt(m[2], 10) || 0 });
       continue;
     }
-    if (/^USI\s*:/i.test(entry)) { nonRiconosciute.push(entry); continue; }
+    if (/^USI\s*:/i.test(entryPulita)) { nonRiconosciute.push(entryRaw); continue; }
 
-    m = entry.match(/^(.+?)\s*:\s*([+-]?\d+)$/i);
+    m = entryPulita.match(/^(.+?)\s*:\s*([+-]?\d+)$/i);
     if (m) { ops.push({ type: 'qty', name: m[1].trim(), delta: parseInt(m[2], 10) || 0 }); continue; }
 
-    // qualunque altra riga non vuota che non corrisponde a nessuna sintassi valida
-    if (entry.trim()) nonRiconosciute.push(entry);
+    if (entryPulita.trim()) nonRiconosciute.push(entryRaw);
   }
-  return { ops, nonRiconosciute };
+  return { ops, nonRiconosciute, trasferimenti };
 }
 
 function parseObjectLine(line) {
@@ -932,29 +1136,30 @@ function estraiSezioneBagaglio(html, icona) {
   return { rx, start: m[1], body: m[2], end: m[3] };
 }
 
-function aggiornaBagaglio(html, modInventarioRaw) {
-  const { ops, nonRiconosciute } = parseInventarioMods(modInventarioRaw);
-  if (!ops.length) return { html, nonRiconosciute };
+function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
+  const parsed = parseInventarioMods(modInventarioRaw);
+  const ops = parsed.ops;
+  const nonRiconosciute = parsed.nonRiconosciute;
+  const trasferimenti = dedupTrasferimenti([...(parsed.trasferimenti || []), ...(trasferimentiEsterni || [])]);
+  if (!ops.length) return { html, nonRiconosciute, trasferimenti };
 
-  // Estraggo le tre sezioni gia' presenti nella scheda (se manca una sezione,
-  // es. una scheda vecchia senza Immunità, quella specifica viene ignorata
-  // senza rompere le altre due).
   const sezioni = {};
   CATEGORIE_BAGAGLIO.forEach(cat => {
     const sez = estraiSezioneBagaglio(html, cat.icona);
     if (!sez) return;
     const byName = new Map();
     sez.body.split(/\n/).forEach(line => {
-      const parsed = parseObjectLine(line);
-      if (parsed) byName.set(normalizeText(parsed.name), parsed);
+      const parsedObj = parseObjectLine(line);
+      if (parsedObj) byName.set(normalizeText(parsedObj.name), parsedObj);
     });
     sezioni[cat.tag] = { ...sez, byName, cat };
   });
 
+  const trasferimentiUsati = new Set();
   ops.forEach(op => {
     if (op.type === 'new') {
       const target = sezioni[op.categoria] || sezioni['OGGETTO'];
-      if (!target) return; // la scheda non ha questa sezione: nulla da fare, in sicurezza
+      if (!target) return;
       const key = normalizeText(op.name);
       if (target.byName.has(key)) {
         const obj = target.byName.get(key);
@@ -966,13 +1171,30 @@ function aggiornaBagaglio(html, modInventarioRaw) {
       return;
     }
 
-    // qty/uses: non sappiamo a priori in quale sezione si trovi l'oggetto,
-    // quindi cerchiamo in tutte e tre e applichiamo alla prima che lo contiene.
     const key = normalizeText(op.name);
     const target = Object.values(sezioni).find(s => s.byName.has(key));
     if (!target) { nonRiconosciute.push(`${op.name}: oggetto non trovato in nessuna sezione del Bagaglio`); return; }
     const obj = target.byName.get(key);
-    if (op.type === 'qty') obj.qty = Math.max(0, (obj.qty || 0) + op.delta);
+
+    if (op.type === 'qty') {
+      // Se questa diminuzione corrisponde a un trasferimento rilevato nella Lista,
+      // salviamo PRIMA della sottrazione categoria e descrizione del bene ceduto.
+      if (op.delta < 0) {
+        const idx = trasferimenti.findIndex((t, i) =>
+          !trasferimentiUsati.has(i) &&
+          normalizeText(t.name) === key &&
+          Math.abs(op.delta) === (t.qty || 1)
+        );
+        if (idx >= 0) {
+          trasferimentiUsati.add(idx);
+          trasferimenti[idx].categoria = target.cat.tag;
+          trasferimenti[idx].categoriaLabel = target.cat.label;
+          trasferimenti[idx].descrizione = obj.tail || '';
+          trasferimenti[idx].quantitaPrima = obj.qty || 0;
+        }
+      }
+      obj.qty = Math.max(0, (obj.qty || 0) + op.delta);
+    }
     if (op.type === 'uses') obj.tail = updateUsesInTail(obj.tail || '', op.delta);
   });
 
@@ -984,7 +1206,7 @@ function aggiornaBagaglio(html, modInventarioRaw) {
     const rebuilt = finalObjs.length ? '\n' + finalObjs.map(rebuildObjectLine).join('\n') : '';
     out = out.replace(sez.rx, sez.start + rebuilt + sez.end);
   });
-  return { html: out, nonRiconosciute };
+  return { html: out, nonRiconosciute, trasferimenti };
 }
 
 function costruisciRegistro(iniziali, finali, deltaCasa, puntiCasaIniziali, extraInfo) {
@@ -1232,9 +1454,12 @@ function elaboraTerminale() {
   // Un solo documento (Scheda Valori) su cui vengono applicate in sequenza
   // tutte le modifiche: Punti/Prestigio, fondo Extra, Bagaglio, Materie/Sapienze.
   const schedaValoriHTML = document.getElementById('inputScheda').value || '';
-  const modInventario = document.getElementById('modInventario').value || '';
+  const modInventarioManuale = document.getElementById('modInventario').value || '';
   const puntiCasaIniziali = parseInt(document.getElementById('inputPuntiCasaIniziali').value, 10) || 0;
   const rawOriginale = document.getElementById('inputComplessivoOriginale')?.value || '';
+  const boxGDaLista = estraiBoxGDaLista(rawOriginale);
+  const modInventario = modInventarioManuale.trim() ? modInventarioManuale : boxGDaLista;
+  const trasferimentiDaLista = estraiTrasferimentiDaTesto(rawOriginale);
 
   const deltasBoxA = estraiDeltaDaBoxA();
   const extraBoxA = estraiDeltaGaleoniExtraDaBoxA();
@@ -1248,7 +1473,7 @@ function elaboraTerminale() {
   const extraInfo = aggiornaGaleoniExtra(html, riconciliati.extraGaleoni, riconciliati.originale.baseExtraRiferita);
   html = extraInfo.html;
 
-  const risultatoBagaglio = aggiornaBagaglio(html, modInventario);
+  const risultatoBagaglio = aggiornaBagaglio(html, modInventario, trasferimentiDaLista);
   html = risultatoBagaglio.html;
   html = aggiornaPianoOSapienze(html);
 
@@ -1257,6 +1482,15 @@ function elaboraTerminale() {
   document.getElementById('outForum').value = registro;
   document.getElementById('outScheda').value = html;
 
+  const risultatiPanel = document.getElementById('risultati_panel');
+  if (risultatiPanel) risultatiPanel.style.display = 'block';
+
+  const outTrasferimenti = document.getElementById('outTrasferimenti');
+  const trasferimentiPanel = document.getElementById('trasferimenti_panel');
+  const testoTrasferimenti = costruisciOutputTrasferimenti(risultatoBagaglio.trasferimenti || []);
+  if (outTrasferimenti) outTrasferimenti.value = testoTrasferimenti;
+  if (trasferimentiPanel) trasferimentiPanel.style.display = testoTrasferimenti ? 'block' : 'none';
+
   const warnBox = document.getElementById('ignorati_box');
   if (warnBox) {
     const avvisiStat = [];
@@ -1264,6 +1498,14 @@ function elaboraTerminale() {
     riconciliati.correzioni.forEach(msg => {
       avvisiStat.push('<b>⚠ Controllo incrociato (Box C):</b> ' + msg);
     });
+
+    if (!modInventarioManuale.trim() && boxGDaLista) {
+      avvisiStat.push('<b>✓ Box G recuperato automaticamente:</b> il campo Box G era vuoto, quindi sono state usate le righe presenti nel riquadro “Dati per l’Accredito” della Lista incollata nel Box C.');
+    }
+
+    if (risultatoBagaglio.trasferimenti && risultatoBagaglio.trasferimenti.length) {
+      avvisiStat.push('<b>📦 Trasferimento rilevato:</b> l’oggetto è stato scalato soltanto dalla Scheda Valori del PG corrente. Le istruzioni per accreditarlo al/ai destinatario/i sono state preparate nel riquadro “Trasferimenti ad altri PG rilevati” qui sotto.');
+    }
 
     if (updatedValori.ignorati && updatedValori.ignorati.length) {
       avvisiStat.push('<b>⚠ Attenzione:</b> il Box A contiene ' +
@@ -1293,7 +1535,7 @@ function elaboraTerminale() {
         (risultatoBagaglio.nonRiconosciute.length > 1 ? 'queste righe' : 'questa riga') +
         ' che non ' + (risultatoBagaglio.nonRiconosciute.length > 1 ? 'corrispondono' : 'corrisponde') +
         ' a nessuna sintassi valida, quindi <u>non ' + (risultatoBagaglio.nonRiconosciute.length > 1 ? 'sono state applicate' : 'è stata applicata') + '</u>: <b>' +
-        risultatoBagaglio.nonRiconosciute.map(r => r.replace(/</g, '&lt;')).join('</b>, <b>') + '</b>. Usa uno dei tre formati indicati nella guida sopra Box G.');
+        risultatoBagaglio.nonRiconosciute.map(r => r.replace(/</g, '&lt;')).join('</b>, <b>') + '</b>.');
     }
 
     ['Punti Post', 'Galeoni'].forEach(nomeCampo => {
@@ -1302,7 +1544,7 @@ function elaboraTerminale() {
         if (!haDebito) {
           avvisiStat.push(
             `<b>⚠ Attenzione:</b> ${nomeCampo} risulta negativo (${formatNumeroItaliano(updatedValori.finali[nomeCampo])}) ` +
-            `e nella scheda non è presente una voce Debito (${nomeCampo}). Controlla che questo sia l'esito previsto dal regolamento.`
+            `e nella scheda non è presente una voce Debito (${nomeCampo}).`
           );
         }
       }
@@ -1316,6 +1558,7 @@ function elaboraTerminale() {
       warnBox.innerHTML = '';
     }
   }
+  if (risultatiPanel) risultatiPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 </script>
 
