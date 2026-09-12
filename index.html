@@ -405,6 +405,24 @@
 
         .btn-torna-su { width:46px; height:46px; right:22px; bottom:78px; font-size:16px; border-radius:50%; }
 
+        /* Audit/import overview */
+        .import-overview { display:none; margin-top:14px; padding:13px 14px; border-radius:12px; border:1px solid rgba(63,107,79,.20); background:linear-gradient(90deg,#E8F0E8,#F2F6EF); }
+        .import-overview.show { display:block; }
+        .import-overview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:9px; }
+        .import-overview-title { font-weight:850; color:#31523D; font-size:12.5px; display:flex; align-items:center; gap:7px; }
+        .import-overview-meta { color:#647164; font-size:11px; font-weight:700; }
+        .overview-chips { display:flex; flex-wrap:wrap; gap:6px; }
+        .overview-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 8px; border-radius:999px; border:1px solid rgba(63,107,79,.16); background:rgba(255,255,255,.72); color:#3E5847; font-size:10.5px; font-weight:800; line-height:1.2; }
+        .overview-chip.muted { color:#7C7480; border-color:rgba(156,107,36,.16); background:rgba(255,255,255,.52); }
+        .import-overview-detail { display:none; margin-top:8px; padding-top:8px; border-top:1px solid rgba(63,107,79,.12); color:#53685A; font-size:10.8px; line-height:1.4; }
+        .import-overview-detail.show { display:block; }
+        .import-overview-detail b { color:#31523D; }
+        .scheda-detail { margin-top:8px; min-height:16px; color:#7C7480; font-size:11px; line-height:1.35; }
+        .scheda-detail.error { color:#7A3131; }
+        .execution-summary { display:none; margin-bottom:12px; padding:10px 12px; border-radius:10px; border:1px solid rgba(63,107,79,.20); background:#E8F0E8; color:#31523D; font-size:11.5px; font-weight:700; }
+        .execution-summary.show { display:block; }
+        .action-primary:disabled { opacity:.48; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
+
         @media (max-width:820px) {
             body { padding:13px 10px 52px; }
             .container { gap:13px; }
@@ -464,7 +482,16 @@
                     <span class="mini-badge" id="scheda_badge">In attesa</span>
                 </div>
                 <textarea id="inputScheda" placeholder="Incolla il codice HTML completo della Scheda Valori..."></textarea>
+                <div id="scheda_status_detail" class="scheda-detail"></div>
             </section>
+        </div>
+        <div class="import-overview" id="import_overview" aria-live="polite">
+            <div class="import-overview-head">
+                <div class="import-overview-title"><i class="fa-solid fa-circle-check"></i><span id="import_overview_title">Dati importati</span></div>
+                <div class="import-overview-meta" id="import_overview_meta"></div>
+            </div>
+            <div class="overview-chips" id="import_overview_chips"></div>
+            <div class="import-overview-detail" id="import_overview_detail"></div>
         </div>
     </div>
 
@@ -519,6 +546,7 @@
             </div>
         </div>
 
+        <div id="execution_summary" class="execution-summary"></div>
         <div id="ignorati_box" class="warn-box"></div>
 
         <div class="result-pane active" id="result_registro">
@@ -571,12 +599,66 @@ function setStatoElemento(chipId, cardId, badgeId, stato, testoBadge) {
   if (badge && testoBadge) badge.textContent = testoBadge;
 }
 
+function validaSchedaValori(raw) {
+  const t = String(raw || '');
+  if (!t.trim()) return { ok:false, vuota:true, motivo:'' };
+  const haPP = /Punti\s+Post\s*:/i.test(t);
+  const haG = /Galeoni\s*:/i.test(t);
+  const sembraHtml = /<div\b|<table\b|<details\b/i.test(t);
+  if (haPP && haG && sembraHtml) return { ok:true, vuota:false, motivo:'' };
+  const mancanti = [];
+  if (!haPP) mancanti.push('Punti Post');
+  if (!haG) mancanti.push('Galeoni');
+  if (!sembraHtml) mancanti.push('codice HTML');
+  return { ok:false, vuota:false, motivo:'Non sembra una Scheda Valori completa' + (mancanti.length ? ' · manca: ' + mancanti.join(', ') : '') };
+}
+
+function renderImportOverview(d) {
+  const box = document.getElementById('import_overview');
+  if (!box) return;
+  if (!d) { box.classList.remove('show'); return; }
+  const title = document.getElementById('import_overview_title');
+  const meta = document.getElementById('import_overview_meta');
+  const chips = document.getElementById('import_overview_chips');
+  const detail = document.getElementById('import_overview_detail');
+  if (title) title.textContent = (d.nomePg || 'PG') + ' · ' + (d.tipoPg === 'studente' ? 'Studente' : 'Adulto');
+  if (meta) meta.textContent = Number(d.versione) === 2 ? 'FF-ACCREDITI-V2' : 'Formato BOX';
+  if (chips) {
+    const counts = [
+      ['Variazioni', (d.boxA || []).length, 'fa-chart-line'],
+      [d.tipoPg === 'studente' ? 'Voti' : 'Sapienze', d.tipoPg === 'studente' ? (d.boxE || []).length : (d.boxF || []).length, d.tipoPg === 'studente' ? 'fa-graduation-cap' : 'fa-book-open'],
+      ['Bagaglio', (d.boxG || []).length, 'fa-suitcase'],
+      ['Trasferimenti', (d.trasferimenti || []).length, 'fa-arrow-right-arrow-left']
+    ];
+    chips.innerHTML = counts.map(([label,n,icon]) => `<span class="overview-chip${n ? '' : ' muted'}"><i class="fa-solid ${icon}"></i>${label}: ${n}</span>`).join('');
+  }
+  if (detail) {
+    const contatori = { USI:0, POST:0, ROLE:0 };
+    (d.boxG || []).forEach(r => {
+      const m = String(r).match(/^CONTATORE\s+(USI|UTILIZZI|POST|ROLE)\s*:/i);
+      if (!m) return;
+      const tipo = m[1].toUpperCase() === 'UTILIZZI' ? 'USI' : m[1].toUpperCase();
+      if (Object.prototype.hasOwnProperty.call(contatori, tipo)) contatori[tipo]++;
+    });
+    const parti = Object.entries(contatori).filter(([,n]) => n).map(([k,n]) => `${k}: ${n}`);
+    if (parti.length) {
+      detail.innerHTML = `<b>Contatori Bagaglio:</b> ${parti.join(' · ')}. Verranno aggiornati nella descrizione degli oggetti; se un contatore non viene trovato, il tool lo segnala senza ignorarlo in silenzio.`;
+      detail.classList.add('show');
+    } else {
+      detail.innerHTML = '';
+      detail.classList.remove('show');
+    }
+  }
+  box.classList.add('show');
+}
+
 function aggiornaStatoWorkspace() {
   const listaRaw = document.getElementById('inputComplessivoOriginale')?.value || '';
   const schedaRaw = document.getElementById('inputScheda')?.value || '';
   const parsed = listaRaw.trim() ? leggiProtocolloAccrediti(listaRaw) : null;
   const listaOk = !!(parsed && parsed.ok);
-  const schedaOk = !!schedaRaw.trim();
+  const schedaCheck = validaSchedaValori(schedaRaw);
+  const schedaOk = schedaCheck.ok;
 
   if (!listaRaw.trim()) setStatoElemento('lista_state_chip','lista_input_card','lista_badge','', 'In attesa');
   else if (listaOk) {
@@ -584,8 +666,17 @@ function aggiornaStatoWorkspace() {
     setStatoElemento('lista_state_chip','lista_input_card','lista_badge','ready', formato);
   } else setStatoElemento('lista_state_chip','lista_input_card','lista_badge','error','Non riconosciuta');
 
-  if (schedaOk) setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','ready','Pronta');
-  else setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','', 'In attesa');
+  const schedaDetail = document.getElementById('scheda_status_detail');
+  if (schedaCheck.vuota) {
+    setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','', 'In attesa');
+    if (schedaDetail) { schedaDetail.textContent = ''; schedaDetail.classList.remove('error'); }
+  } else if (schedaOk) {
+    setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','ready','Pronta');
+    if (schedaDetail) { schedaDetail.textContent = 'Scheda riconosciuta.'; schedaDetail.classList.remove('error'); }
+  } else {
+    setStatoElemento('scheda_state_chip','scheda_input_card','scheda_badge','error','Non riconosciuta');
+    if (schedaDetail) { schedaDetail.textContent = schedaCheck.motivo; schedaDetail.classList.add('error'); }
+  }
 
   let extraOk = true;
   let manca = '';
@@ -606,7 +697,8 @@ function aggiornaStatoWorkspace() {
     else if (manca) hint.textContent = manca;
     else if (!listaRaw.trim() && !schedaRaw.trim()) hint.textContent = 'Incolla Lista e Scheda Valori';
     else if (!listaOk) hint.textContent = 'Lista da riconoscere';
-    else if (!schedaOk) hint.textContent = 'Incolla la Scheda Valori';
+    else if (!schedaRaw.trim()) hint.textContent = 'Incolla la Scheda Valori';
+    else if (!schedaOk) hint.textContent = 'Scheda Valori non riconosciuta';
     else hint.textContent = 'Completa i dati richiesti';
   }
 }
@@ -634,6 +726,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.querySelectorAll('[data-result-tab]').forEach(btn => {
     btn.addEventListener('click', () => attivaTabRisultato(btn.dataset.resultTab));
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const btn = document.getElementById('generate_btn');
+      if (btn && !btn.disabled) { e.preventDefault(); elaboraTerminale(); }
+    }
   });
 
   aggiornaStatoWorkspace();
@@ -695,10 +794,17 @@ function resetGeneratore() {
   if (mancanti) mancanti.style.display = 'none';
   const trasTab = document.getElementById('trasferimenti_tab_btn');
   if (trasTab) trasTab.style.display = 'none';
+  const overview = document.getElementById('import_overview');
+  if (overview) overview.classList.remove('show');
+  const overviewDetail = document.getElementById('import_overview_detail');
+  if (overviewDetail) { overviewDetail.classList.remove('show'); overviewDetail.innerHTML = ''; }
+  const execSummary = document.getElementById('execution_summary');
+  if (execSummary) { execSummary.classList.remove('show'); execSummary.innerHTML = ''; }
   attivaTabRisultato('registro');
   aggiornaStatoWorkspace();
 
   tornaSu();
+  setTimeout(() => document.getElementById('inputComplessivoOriginale')?.focus(), 80);
 }
 
 async function copiaCampo(idCampo, idBottone) {
@@ -845,6 +951,7 @@ function applicaProtocolloLista(mostraErrore) {
       status.innerHTML = raw.trim() ? `<b>Lista non riconosciuta.</b> ${parsed.errore}` : '';
     }
     if (mancanti) mancanti.style.display = 'none';
+    renderImportOverview(null);
     if (mostraErrore && raw.trim()) alert('La Lista incollata non contiene un riquadro Dati per l\'Accredito valido.');
     queueMicrotask(aggiornaStatoWorkspace);
     return null;
@@ -866,6 +973,7 @@ function applicaProtocolloLista(mostraErrore) {
   if (linkWrap) linkWrap.style.display = haVoti ? 'block' : 'none';
   if (casaWrap) casaWrap.style.display = haPuntiCasa ? 'block' : 'none';
   if (mancanti) mancanti.style.display = (haVoti || haPuntiCasa) ? 'block' : 'none';
+  renderImportOverview(d);
 
   if (status) {
     status.style.display = 'block';
@@ -1797,7 +1905,8 @@ function elaboraTerminale() {
   const protocollo = applicaProtocolloLista(true);
   if (!protocollo) return;
   const schedaValoriHTML = document.getElementById('inputScheda').value || '';
-  if (!schedaValoriHTML.trim()) { alert('Incolla la Scheda Valori.'); return; }
+  const schedaCheck = validaSchedaValori(schedaValoriHTML);
+  if (!schedaCheck.ok) { alert(schedaCheck.vuota ? 'Incolla la Scheda Valori.' : schedaCheck.motivo + '.'); return; }
 
   const puntiCasaRichiesti = protocollo.tipoPg === 'studente' && protocollo.boxA.some(r => /Punti\s+Casa/i.test(r));
   if (puntiCasaRichiesti && String(document.getElementById('inputPuntiCasaIniziali').value || '').trim() === '') {
@@ -1847,6 +1956,19 @@ function elaboraTerminale() {
   attivaTabRisultato('registro');
 
   renderTrasferimentiDestinatari(risultatoBagaglio.trasferimenti || []);
+
+  const execSummary = document.getElementById('execution_summary');
+  if (execSummary) {
+    const specifiche = protocollo.tipoPg === 'studente' ? (protocollo.boxE || []).length : (protocollo.boxF || []).length;
+    const parti = [
+      `${(protocollo.boxA || []).length} variazioni`,
+      `${specifiche} ${protocollo.tipoPg === 'studente' ? 'voti' : 'sapienze'}`,
+      `${(protocollo.boxG || []).length} movimenti Bagaglio`
+    ];
+    if (risultatoBagaglio.trasferimenti?.length) parti.push(`${risultatoBagaglio.trasferimenti.length} trasferimenti`);
+    execSummary.innerHTML = `<i class="fa-solid fa-circle-check"></i>&nbsp; ${protocollo.nomePg || 'PG'} elaborato · ${parti.join(' · ')}`;
+    execSummary.classList.add('show');
+  }
 
   const warnBox = document.getElementById('ignorati_box');
   if (warnBox) {
