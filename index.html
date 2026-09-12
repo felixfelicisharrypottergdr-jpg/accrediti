@@ -1341,12 +1341,22 @@ function parseInventarioMods(raw) {
       continue;
     }
 
-    m = entryPulita.match(/^USI\s*:\s*(.+?)\s*:\s*([+-]?\d+)$/i);
+    m = entryPulita.match(/^CONTATORE\s+(USI|UTILIZZI|POST|ROLE)\s*:\s*(.+?)\s*:\s*([+-]?\d+)$/i);
     if (m) {
-      ops.push({ type: 'uses', name: m[1].trim(), delta: parseInt(m[2], 10) || 0 });
+      const tipoRaw = m[1].toUpperCase();
+      const tipoContatore = (tipoRaw === 'UTILIZZI') ? 'USI' : tipoRaw;
+      ops.push({ type: 'uses', name: m[2].trim(), delta: parseInt(m[3], 10) || 0, counterType: tipoContatore });
       continue;
     }
-    if (/^USI\s*:/i.test(entryPulita)) { nonRiconosciute.push(entryRaw); continue; }
+
+    // Compatibilità con le liste già pubblicate: "USI: Nome: +1".
+    // In questo formato il tipo viene rilevato automaticamente dalla riga dell'oggetto.
+    m = entryPulita.match(/^USI\s*:\s*(.+?)\s*:\s*([+-]?\d+)$/i);
+    if (m) {
+      ops.push({ type: 'uses', name: m[1].trim(), delta: parseInt(m[2], 10) || 0, counterType: 'AUTO' });
+      continue;
+    }
+    if (/^(?:CONTATORE\s+\w+|USI)\s*:/i.test(entryPulita)) { nonRiconosciute.push(entryRaw); continue; }
 
     m = entryPulita.match(/^(.+?)\s*:\s*([+-]?\d+)$/i);
     if (m) { ops.push({ type: 'qty', name: m[1].trim(), delta: parseInt(m[2], 10) || 0 }); continue; }
@@ -1407,15 +1417,51 @@ function rebuildObjectLine(obj) {
   return `- <b>${obj.name} [${obj.qty}]:</b>${obj.tail || ''}`;
 }
 
-function updateUsesInTail(tail, delta) {
-  const m =
-    tail.match(/\((\d+)\s*\/\s*(\d+)\s*us[oi][^) ]*\)/i) ||
-    tail.match(/\((\d+)\s*\/\s*(\d+)\s*post[^)]*\)/i) ||
-    tail.match(/\((\d+)\s*\/\s*(\d+)\s*role[^)]*\)/i);
-  if (!m) return tail;
-  const current = parseInt(m[1], 10) || 0;
-  const next = Math.max(0, current + delta);
-  return tail.replace(m[0], m[0].replace(m[1], String(next)));
+function normalizzaTipoContatoreOggetto(raw) {
+  const s = normalizeText(raw || '');
+  if (/^post/.test(s)) return 'POST';
+  if (/^role/.test(s)) return 'ROLE';
+  if (/^(uso|usi|utilizz)/.test(s)) return 'USI';
+  return '';
+}
+
+function updateCounterInTail(tail, delta, counterType) {
+  const tipoRichiesto = String(counterType || 'AUTO').toUpperCase();
+  const testo = String(tail || '');
+
+  // Formati supportati, con o senza parentesi/quadre:
+  // "1/5 Usi", "(1 / 5 Post)", "[2/3 Role]", "Utilizzi: 1/5".
+  const patterns = [
+    /(\d+)\s*\/\s*(\d+)\s*(usi?|utilizz[io]|post|role)\b/gi,
+    /(usi?|utilizz[io]|post|role)\s*:?\s*(\d+)\s*\/\s*(\d+)/gi
+  ];
+
+  for (let p = 0; p < patterns.length; p++) {
+    const rx = patterns[p];
+    let m;
+    while ((m = rx.exec(testo)) !== null) {
+      const unitRaw = p === 0 ? m[3] : m[1];
+      const unitType = normalizzaTipoContatoreOggetto(unitRaw);
+      if (tipoRichiesto !== 'AUTO' && unitType !== tipoRichiesto) continue;
+
+      const current = parseInt(p === 0 ? m[1] : m[2], 10) || 0;
+      const max = parseInt(p === 0 ? m[2] : m[3], 10) || 0;
+      const next = Math.min(max || Number.MAX_SAFE_INTEGER, Math.max(0, current + delta));
+
+      const full = m[0];
+      let replacement;
+      if (p === 0) {
+        replacement = full.replace(/^\d+/, String(next));
+      } else {
+        // Sostituiamo soltanto il numeratore dopo l'eventuale etichetta.
+        const localRx = new RegExp('(usi?|utilizz[io]|post|role)(\\s*:?\\s*)' + current + '(\\s*\\/)', 'i');
+        replacement = full.replace(localRx, `$1$2${next}$3`);
+      }
+      return { tail: testo.slice(0, m.index) + replacement + testo.slice(m.index + full.length), found: true, unitType, current, next, max };
+    }
+  }
+
+  return { tail: testo, found: false, unitType: tipoRichiesto };
 }
 
 function estraiSezioneBagaglio(html, icona) {
@@ -1484,7 +1530,15 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
       }
       obj.qty = Math.max(0, (obj.qty || 0) + op.delta);
     }
-    if (op.type === 'uses') obj.tail = updateUsesInTail(obj.tail || '', op.delta);
+    if (op.type === 'uses') {
+      const aggiornato = updateCounterInTail(obj.tail || '', op.delta, op.counterType || 'AUTO');
+      if (aggiornato.found) {
+        obj.tail = aggiornato.tail;
+      } else {
+        const etichetta = (op.counterType && op.counterType !== 'AUTO') ? ` ${op.counterType}` : '';
+        nonRiconosciute.push(`${op.name}: contatore${etichetta} non trovato nella descrizione dell'oggetto`);
+      }
+    }
   });
 
   let out = html;
