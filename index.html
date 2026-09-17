@@ -346,6 +346,7 @@
         .input-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; }
         .input-card-title { display:flex; align-items:center; gap:8px; color:var(--ink); font-weight:800; font-size:13.5px; }
         .input-card-title i { color:var(--gold-deep); width:18px; text-align:center; }
+        .input-card-subtitle { margin-top:3px; color:var(--ink-soft); font-size:11.5px; line-height:1.35; }
         .mini-badge {
             display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; border:1px solid rgba(156,107,36,.22);
             background:#F7ECD3; color:#76501B; font-size:10.5px; font-weight:800; white-space:nowrap;
@@ -539,7 +540,7 @@
                     <div class="input-card-title"><i class="fa-solid fa-scroll"></i>Lista della Spesa</div>
                     <span class="mini-badge" id="lista_badge">In attesa</span>
                 </div>
-                <textarea id="inputComplessivoOriginale" placeholder="Incolla l’intera Lista della Spesa..."></textarea>
+                <textarea id="inputComplessivoOriginale" placeholder="Incolla qui il post completo pubblicato dal PG (formato V3 o Lista precedente)..."></textarea>
                 <div id="import_status" class="import-inline" style="display:none;"></div>
             </section>
 
@@ -982,7 +983,7 @@ function renderImportOverview(d) {
   const numeroConoscenze = conoscenze.reduce((tot, gruppo) => tot + (gruppo.conoscenze || []).length, 0);
 
   if (title) title.textContent = (d.nomePg || 'PG') + ' · ' + (d.tipoPg === 'studente' ? 'Studente' : 'Adulto');
-  if (meta) meta.textContent = Number(d.versione) === 2 ? `FF-ACCREDITI-V2${d.catalogVersion ? ' · Catalogo v' + d.catalogVersion : ''}` : 'Formato BOX';
+  if (meta) meta.textContent = Number(d.versione) >= 2 ? `FF-ACCREDITI-V${d.versione}${d.catalogVersion ? ' · Catalogo v' + d.catalogVersion : ''}` : 'Formato BOX';
   if (chips) {
     const counts = [
       ['Variazioni', (d.boxA || []).length, 'fa-chart-line'],
@@ -1061,7 +1062,7 @@ function aggiornaStatoWorkspace() {
 
   if (!listaRaw.trim()) setStatoElemento('lista_state_chip','lista_input_card','lista_badge','', 'In attesa');
   else if (listaOk) {
-    const formato = Number(parsed.data.versione) === 2 ? 'V2' : 'Formato attuale';
+    const formato = Number(parsed.data.versione) >= 2 ? `V${parsed.data.versione}` : 'Formato precedente';
     setStatoElemento('lista_state_chip','lista_input_card','lista_badge','ready', formato);
   } else setStatoElemento('lista_state_chip','lista_input_card','lista_badge','error','Non riconosciuta');
 
@@ -1449,19 +1450,20 @@ function aggiornaConoscenzeScheda(html, gruppiRaw) {
 function leggiProtocolloAccrediti(raw) {
   const testo = String(raw || '').replace(/\r/g, '');
 
-  // Se una Lista contiene anche il blocco tecnico V2, lo leggiamo direttamente.
-  // Non è obbligatorio: il formato BOX qui sotto resta pienamente valido.
-  const marker = testo.match(/\[FF-ACCREDITI-V2\]\s*([\s\S]*?)\s*\[\/FF-ACCREDITI-V2\]/i);
+  // Il formato corrente usa FF-ACCREDITI-V3. Manteniamo la compatibilità
+  // con V2 e, più sotto, con il vecchio riquadro BOX.
+  const marker = testo.match(/\[FF-ACCREDITI-V(3|2)\]\s*([\s\S]*?)\s*\[\/FF-ACCREDITI-V\1\]/i);
   if (marker) {
     try {
-      const data = JSON.parse(marker[1].trim());
-      if (data && Number(data.versione) === 2 && ['studente','adulto'].includes(data.tipoPg) &&
+      const data = JSON.parse(marker[2].trim());
+      if (data && [2,3].includes(Number(data.versione)) && ['studente','adulto'].includes(data.tipoPg) &&
           Array.isArray(data.boxA) && Array.isArray(data.boxE) && Array.isArray(data.boxF) && Array.isArray(data.boxG)) {
         if (!Array.isArray(data.trasferimenti)) data.trasferimenti = [];
         if (!Array.isArray(data.catalogoAcquisti)) data.catalogoAcquisti = [];
         if (!Array.isArray(data.operazioniCatalogo)) data.operazioniCatalogo = [];
         if (!Array.isArray(data.pozioniProdotte)) data.pozioniProdotte = [];
         if (data.catalogVersion == null) data.catalogVersion = '';
+        if (data.protocolRevision == null) data.protocolRevision = '';
         const dalPayload = normalizzaConoscenzeAccredito(data.conoscenzeAcquistate || []);
         data.conoscenzeAcquistate = dalPayload.length ? dalPayload : estraiConoscenzeDaLista(testo);
         return { ok: true, data };
@@ -1472,8 +1474,8 @@ function leggiProtocolloAccrediti(raw) {
   // Formato ufficiale pubblicato dal Generatore Lista della Spesa:
   // <details> ... Dati per l'Accredito ... BOX A / E / F / G ... </details>
   // Non richiede marcatori tecnici aggiuntivi.
-  const details = testo.match(/<details>\s*<summary>[\s\S]*?Dati\s+per\s+l['’]Accredito[\s\S]*?<\/summary>\s*([\s\S]*?)<\/details>/i);
-  if (!details) return { ok: false, errore: 'Riquadro “Dati per l’Accredito” non trovato.' };
+  const details = testo.match(/<details>\s*<summary>[\s\S]*?Dati(?:\s+tecnici)?\s+per\s+l['’]Accredito[\s\S]*?<\/summary>\s*([\s\S]*?)<\/details>/i);
+  if (!details) return { ok: false, errore: 'Blocco tecnico per l’Accredito non trovato nel post del PG.' };
 
   const corpo = details[1].trim();
   const boxes = { A: [], E: [], F: [], G: [] };
@@ -1495,7 +1497,7 @@ function leggiProtocolloAccrediti(raw) {
   });
 
   if (!boxes.A.length && !boxes.E.length && !boxes.F.length && !boxes.G.length) {
-    return { ok: false, errore: 'Il riquadro “Dati per l’Accredito” è presente ma non contiene BOX riconoscibili.' };
+    return { ok: false, errore: 'Il blocco tecnico per l’Accredito è presente ma non contiene dati riconoscibili.' };
   }
 
   const nomeMatch = testo.match(/Lista\s+della\s+Spesa\s+di\s+([^<\n]+?)<\/b>/i);
@@ -1555,6 +1557,37 @@ function leggiProtocolloAccrediti(raw) {
     }
   };
 }
+
+function normalizzaRigaTecnicaInventario(raw) {
+  return String(raw || '').replace(/\r/g,'').replace(/\s+/g,' ').trim();
+}
+function validaSincronizzazioneCommercio(data) {
+  const acquisti=(Array.isArray(data?.catalogoAcquisti)?data.catalogoAcquisti:[]).filter(a=>a && a.esitoTecnico==='INVENTARIO' && a.boxGRiga);
+  if (!acquisti.length) return {ok:true, verificati:0, legacy:true, errori:[]};
+  const box=(Array.isArray(data.boxG)?data.boxG:[]).map(normalizzaRigaTecnicaInventario);
+  const disponibili=new Map();
+  box.forEach(r=>disponibili.set(r,(disponibili.get(r)||0)+1));
+  const errori=[];
+  acquisti.forEach(a=>{
+    const canon=normalizzaRigaTecnicaInventario(a.boxGRiga);
+    const parsed=parseInventarioMods(a.boxGRiga);
+    const op=parsed.ops.length===1?parsed.ops[0]:null;
+    if (!op || op.type!=='new') {
+      errori.push(`${a.nome || a.productId || 'Acquisto catalogo'}: riga inventario tecnica non valida.`);
+      return;
+    }
+    const categoriaAttesa=String(a.categoriaScheda || (a.destinazione==='POZIONI'?'POZIONE':'OGGETTO')).toUpperCase().replace('À','A');
+    if (op.categoria!==categoriaAttesa || normalizeText(op.name)!==normalizeText(a.nome) || Number(op.qty)!==Number(a.quantita)) {
+      errori.push(`${a.nome || a.productId || 'Acquisto catalogo'}: metadati e riga inventario non coincidono.`);
+      return;
+    }
+    const n=disponibili.get(canon)||0;
+    if(n<=0) errori.push(`${a.nome}: la riga tecnica del catalogo non è presente nel Bagaglio della Lista.`);
+    else disponibili.set(canon,n-1);
+  });
+  return {ok:errori.length===0, verificati:acquisti.length, legacy:false, errori};
+}
+
 function applicaProtocolloLista(mostraErrore) {
   const raw = document.getElementById('inputComplessivoOriginale').value || '';
   const parsed = leggiProtocolloAccrediti(raw);
@@ -2234,96 +2267,90 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
   CATEGORIE_BAGAGLIO.forEach(cat => {
     const sez = estraiSezioneBagaglio(html, cat.icona);
     if (!sez) return;
-    const byName = new Map();
+    const objects = [];
     sez.body.split(/\n/).forEach(line => {
       const parsedObj = parseObjectLine(line);
-      if (parsedObj) byName.set(normalizeText(parsedObj.name), parsedObj);
+      if (parsedObj) objects.push(parsedObj);
     });
-    sezioni[cat.tag] = { ...sez, byName, cat };
+    sezioni[cat.tag] = { ...sez, objects, cat };
   });
+
+  const matchesNome = (sez, key) => (sez?.objects || []).filter(o => normalizeText(o.name) === key && (o.qty || 0) > 0);
+  const trovaTarget = (key, categoriaPreferita) => {
+    if (categoriaPreferita && sezioni[categoriaPreferita]) {
+      const target=sezioni[categoriaPreferita], matches=matchesNome(target,key);
+      return {target,matches,ambigua:matches.length>1,multiSezione:false};
+    }
+    const candidati=Object.values(sezioni).map(target=>({target,matches:matchesNome(target,key)})).filter(x=>x.matches.length);
+    if (!candidati.length) return {target:null,matches:[],ambigua:false,multiSezione:false};
+    if (candidati.length>1) return {target:null,matches:candidati.flatMap(x=>x.matches),ambigua:true,multiSezione:true};
+    return {...candidati[0],ambigua:candidati[0].matches.length>1,multiSezione:false};
+  };
 
   const trasferimentiUsati = new Set();
   ops.forEach(op => {
     if (op.type === 'new') {
-      const target = sezioni[op.categoria] || sezioni['OGGETTO'];
-      if (!target) return;
+      const target = sezioni[op.categoria] || (op.categoria==='OGGETTO'?sezioni.OGGETTO:null);
+      if (!target) { nonRiconosciute.push(`${op.name}: sezione ${op.categoria} non trovata nella Scheda`); return; }
       const key = normalizeText(op.name);
-      if (target.byName.has(key)) {
-        const obj = target.byName.get(key);
-        const tailEsistente = pulisciTailOggettoPerTrasferimento(obj.tail || '');
-        const tailInArrivo = pulisciTailOggettoPerTrasferimento(op.desc || '');
-        if (tailInArrivo && tailEsistente && normalizeText(tailInArrivo) !== normalizeText(tailEsistente)) {
-          nonRiconosciute.push(`${op.name}: il destinatario possiede già lo stesso elemento con stato/descrizione differente; trasferimento da verificare manualmente`);
-          return;
-        }
-        obj.qty += op.qty;
-        if (!tailEsistente && tailInArrivo) obj.tail = ` ${op.desc}`;
-      } else {
-        target.byName.set(key, { name: op.name, qty: op.qty, tail: op.desc ? ` ${op.desc}` : '', bold: true });
-      }
+      const tailInArrivo = pulisciTailOggettoPerTrasferimento(op.desc || '');
+      const matches=matchesNome(target,key);
+      const stessoStato=matches.find(o=>normalizeText(pulisciTailOggettoPerTrasferimento(o.tail||''))===normalizeText(tailInArrivo));
+      if (stessoStato) stessoStato.qty=(stessoStato.qty||0)+op.qty;
+      else target.objects.push({ name: op.name, qty: op.qty, tail: op.desc ? ` ${op.desc}` : '', bold: true });
       return;
     }
 
     const key = normalizeText(op.name);
     const trasferimentoCandidato = op.delta < 0 ? trasferimenti.find((t, i) =>
-      !trasferimentiUsati.has(i) &&
-      normalizeText(t.name) === key &&
-      Math.abs(op.delta) === (t.qty || 1)
+      !trasferimentiUsati.has(i) && normalizeText(t.name) === key && Math.abs(op.delta) === (t.qty || 1)
     ) : null;
     const categoriaPreferita = trasferimentoCandidato && trasferimentoCandidato.categoriaRichiesta;
-    const target = (categoriaPreferita && sezioni[categoriaPreferita] && sezioni[categoriaPreferita].byName.has(key))
-      ? sezioni[categoriaPreferita]
-      : Object.values(sezioni).find(s => s.byName.has(key));
-    if (!target) {
-      const msg = `${op.name}: oggetto non trovato in nessuna sezione del Bagaglio`;
+    const ris=trovaTarget(key,categoriaPreferita);
+    if (!ris.target || !ris.matches.length) {
+      const msg = ris.multiSezione
+        ? `${op.name}: presente in più sezioni del Bagaglio; indica la categoria corretta`
+        : `${op.name}: elemento non trovato nel Bagaglio`;
       nonRiconosciute.push(msg);
       if (op.delta < 0) {
         const idxTrasf = trasferimenti.findIndex((t, i) => !trasferimentiUsati.has(i) && normalizeText(t.name) === key && Math.abs(op.delta) === (t.qty || 1));
-        if (idxTrasf >= 0) {
-          trasferimentiUsati.add(idxTrasf);
-          trasferimenti[idxTrasf].validato = false;
-          trasferimenti[idxTrasf].errore = msg;
-        }
+        if (idxTrasf >= 0) { trasferimentiUsati.add(idxTrasf); trasferimenti[idxTrasf].validato=false; trasferimenti[idxTrasf].errore=msg; }
       }
       return;
     }
-    const obj = target.byName.get(key);
+    if (ris.ambigua) {
+      const msg=`${op.name}: trovate ${ris.matches.length} righe con lo stesso nome ma stato/variante differente; operazione non applicata perché non è univoca`;
+      nonRiconosciute.push(msg);
+      if (op.delta < 0 && trasferimentoCandidato) {
+        const idxTrasf=trasferimenti.indexOf(trasferimentoCandidato);
+        if(idxTrasf>=0){trasferimentiUsati.add(idxTrasf);trasferimenti[idxTrasf].validato=false;trasferimenti[idxTrasf].errore=msg;}
+      }
+      return;
+    }
+    const target=ris.target, obj=ris.matches[0];
 
     if (op.type === 'qty') {
-      // Se questa diminuzione corrisponde a un trasferimento rilevato nella Lista,
-      // la Scheda del mittente è la fonte di verità: categoria, stato e quantità
-      // vengono catturati da qui prima di qualsiasi sottrazione.
-      let transferIdx = -1;
       if (op.delta < 0) {
-        transferIdx = trasferimenti.findIndex((t, i) =>
-          !trasferimentiUsati.has(i) &&
-          normalizeText(t.name) === key &&
-          Math.abs(op.delta) === (t.qty || 1)
-        );
+        const transferIdx = trasferimenti.findIndex((t, i) => !trasferimentiUsati.has(i) && normalizeText(t.name) === key && Math.abs(op.delta) === (t.qty || 1));
         if (transferIdx >= 0) {
           trasferimentiUsati.add(transferIdx);
           const t = trasferimenti[transferIdx];
-          t.categoria = target.cat.tag;
-          t.categoriaLabel = target.cat.label;
-          t.descrizione = obj.tail || '';
-          t.quantitaPrima = obj.qty || 0;
-          t.preservaStato = true;
+          t.categoria = target.cat.tag; t.categoriaLabel = target.cat.label; t.descrizione = obj.tail || '';
+          t.quantitaPrima = obj.qty || 0; t.preservaStato = true;
           if ((obj.qty || 0) < (t.qty || 1)) {
-            t.validato = false;
-            t.errore = `${op.name}: quantità insufficiente per il trasferimento (${obj.qty || 0} posseduti, ${t.qty || 1} richiesti)`;
-            nonRiconosciute.push(t.errore);
-            return;
+            t.validato = false; t.errore = `${op.name}: quantità insufficiente per il trasferimento (${obj.qty || 0} posseduti, ${t.qty || 1} richiesti)`;
+            nonRiconosciute.push(t.errore); return;
           }
           t.validato = true;
         }
       }
+      if ((obj.qty || 0) + op.delta < 0) { nonRiconosciute.push(`${op.name}: quantità insufficiente (${obj.qty || 0} posseduti, variazione ${op.delta})`); return; }
       obj.qty = Math.max(0, (obj.qty || 0) + op.delta);
     }
     if (op.type === 'uses') {
       const aggiornato = updateCounterInTail(obj.tail || '', op.delta, op.counterType || 'AUTO');
-      if (aggiornato.found) {
-        obj.tail = aggiornato.tail;
-      } else {
+      if (aggiornato.found) obj.tail = aggiornato.tail;
+      else {
         const etichetta = (op.counterType && op.counterType !== 'AUTO') ? ` ${op.counterType}` : '';
         nonRiconosciute.push(`${op.name}: contatore${etichetta} non trovato nella descrizione dell'oggetto`);
       }
@@ -2332,9 +2359,7 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
 
   let out = html;
   Object.values(sezioni).forEach(sez => {
-    const finalObjs = [...sez.byName.values()]
-      .filter(o => (o.qty || 0) > 0)
-      .sort((a, b) => normalizeText(a.name).localeCompare(normalizeText(b.name), 'it'));
+    const finalObjs = sez.objects.filter(o => (o.qty || 0) > 0);
     const rebuilt = finalObjs.length ? '\n' + finalObjs.map(rebuildObjectLine).join('\n') : '';
     out = out.replace(sez.rx, sez.start + rebuilt + sez.end);
   });
@@ -2593,16 +2618,33 @@ function tailAggiungiSegmento(tail, testo) {
   return ' ' + base.replace(/^\s+/, '').replace(/\s*\|\s*$/, '') + ' | ' + seg;
 }
 
-function datiSezioneOggettiPerNome(html, targetName, categoriaTag) {
+function datiSezioneOggettiPerNome(html, targetName, categoriaTag, selettore) {
   const cat = String(categoriaTag || 'OGGETTO').toUpperCase();
   const icone = {OGGETTO:'fa-broom-ball', POZIONE:'fa-flask-vial', IMMUNITA:'fa-disease'};
   const sez = estraiSezioneBagaglio(html, icone[cat] || icone.OGGETTO);
   const target = normalizeText(targetName || '');
-  if (!sez || !target) return {sez, linee:[], matches:[]};
+  if (!sez || !target) return {sez, linee:[], matches:[], matchesNome:[]};
   const linee = sez.body.split(/\n/);
-  const matches=[];
-  linee.forEach((line,index)=>{const obj=parseObjectLine(line); if(obj && normalizeText(obj.name)===target) matches.push({index,obj});});
-  return {sez,linee,matches};
+  const matchesNome=[];
+  linee.forEach((line,index)=>{const obj=parseObjectLine(line); if(obj && normalizeText(obj.name)===target) matchesNome.push({index,obj});});
+  let matches=[...matchesNome];
+  const variantLabel=String(selettore?.variantLabel || '').trim();
+  const isPrincipale=selettore?.isPrincipale === true;
+  const targetDesc=normalizeText(selettore?.targetDescrizione || '');
+  if(matches.length>1 && variantLabel){
+    const needle=normalizeText(`Versione: ${variantLabel}`);
+    const filtrate=matches.filter(m=>normalizeText(m.obj.tail||'').includes(needle));
+    if(filtrate.length) matches=filtrate;
+  }
+  if(matches.length>1 && isPrincipale){
+    const filtrate=matches.filter(m=>!/Versione\s*:/i.test(String(m.obj.tail||'')));
+    if(filtrate.length) matches=filtrate;
+  }
+  if(matches.length>1 && targetDesc){
+    const filtrate=matches.filter(m=>normalizeText(m.obj.tail||'').includes(targetDesc));
+    if(filtrate.length) matches=filtrate;
+  }
+  return {sez,linee,matches,matchesNome};
 }
 function sostituisciCorpoSezione(html, dati, linee) {
   return String(html || '').replace(dati.sez.rx, `${dati.sez.start}${linee.join('\n')}${dati.sez.end}`);
@@ -2614,8 +2656,8 @@ function descriviErroreMatch(targetName, dati, tipoLabel) {
   if (dati.matches.length > 1) return `${tipoLabel}: trovate ${dati.matches.length} righe chiamate “${nome}”; modifica non applicata perché il bersaglio non è univoco.`;
   return '';
 }
-function modificaRigaOggettoPerNome(html, targetName, mutator) {
-  const dati=datiSezioneOggettiPerNome(html,targetName,'OGGETTO');
+function modificaRigaOggettoPerNome(html, targetName, mutator, selettore) {
+  const dati=datiSezioneOggettiPerNome(html,targetName,'OGGETTO',selettore);
   if (dati.matches.length !== 1) return {html,trovato:false,ambiguo:dati.matches.length>1,numeroCorrispondenze:dati.matches.length,dettaglio:descriviErroreMatch(targetName,dati,'BERSAGLIO')};
   const match=dati.matches[0];
   const res=mutator({...match.obj}) || {obj:match.obj};
@@ -2727,7 +2769,7 @@ function applicaOperazioniCatalogo(html, operazioni) {
       const res=modificaRigaOggettoPerNome(out,op.targetName,obj=>{
         const upd=aggiornaResistenzaTail(obj.tail||'',delta); obj.tail=upd.tail;
         return {obj,dettaglio:upd.trovato?`Resistenza ${formatNumeroItaliano(upd.prima)} → ${formatNumeroItaliano(upd.dopo)}`:`aggiunto +${formatNumeroItaliano(delta)} Resistenza`};
-      });
+      }, {variantLabel:op.targetVariantLabel,isPrincipale:op.targetIsPrincipale,targetDescrizione:op.targetDescrizione});
       if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName}${res.dettaglio?' · '+res.dettaglio:''}`);} else avvisi.push(res.dettaglio || `${tipo}: oggetto bersaglio “${op.targetName || 'non indicato'}” non trovato.`);
       return;
     }
@@ -2738,7 +2780,7 @@ function applicaOperazioniCatalogo(html, operazioni) {
         const upd=trasformaBonusMalusRiparazione(obj.tail||'',bonusF,malusF); obj.tail=upd.tail;
         if(tipo==='RIPARAZIONE_MAGIE_SINISTER' && !/oggetto\s+illegale/i.test(obj.tail||'')) obj.tail=tailAggiungiSegmento(obj.tail,'Oggetto Illegale');
         return {obj,dettaglio:`${upd.count} bonus/malus aggiornati`};
-      });
+      }, {variantLabel:op.targetVariantLabel,isPrincipale:op.targetIsPrincipale,targetDescrizione:op.targetDescrizione});
       if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName} · ${res.dettaglio}`); if(/0 bonus\/malus/.test(res.dettaglio)) avvisi.push(`${tipo}: “${op.targetName}” trovato, ma non sono stati riconosciuti bonus/malus numerici con segno +/− da trasformare.`);} else avvisi.push(res.dettaglio || `${tipo}: oggetto bersaglio “${op.targetName || 'non indicato'}” non trovato.`);
       return;
     }
@@ -2748,7 +2790,7 @@ function applicaOperazioniCatalogo(html, operazioni) {
         if(/sidecar\s+rotto/i.test(t)) t=t.replace(/sidecar\s+rotto/ig,'Sidecar sostituito');
         else t=tailAggiungiSegmento(t,'Sidecar sostituito');
         obj.tail=t; return {obj,dettaglio:'sidecar sostituito'};
-      });
+      }, {variantLabel:op.targetVariantLabel,isPrincipale:op.targetIsPrincipale,targetDescrizione:op.targetDescrizione});
       if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName}`);} else avvisi.push(res.dettaglio || `${tipo}: motocicletta bersaglio “${op.targetName || 'non indicato'}” non trovata.`);
       return;
     }
@@ -2778,6 +2820,11 @@ function applicaOperazioniCatalogo(html, operazioni) {
 function elaboraTerminale() {
   const protocollo = applicaProtocolloLista(true);
   if (!protocollo) return;
+  const syncCommercio = validaSincronizzazioneCommercio(protocollo);
+  if (!syncCommercio.ok) {
+    alert('Commercio Magico: i dati strutturati del catalogo e le righe inventario non coincidono. Nessun accredito è stato eseguito.\n\n' + syncCommercio.errori.join('\n'));
+    return;
+  }
   const checkRettifiche = validaRettificheStaff(protocollo);
   if (!checkRettifiche.ok) { alert(checkRettifiche.errore); renderRettificheStaff(leggiProtocolloAccrediti(document.getElementById('inputComplessivoOriginale').value || '').data); return; }
   const schedaValoriHTML = document.getElementById('inputScheda').value || '';
@@ -2852,6 +2899,7 @@ function elaboraTerminale() {
     ];
     if (risultatoConoscenze.richieste) parti.push(`${risultatoConoscenze.richieste} conoscenze`);
     if ((protocollo.catalogoAcquisti || []).length) parti.push(`${protocollo.catalogoAcquisti.length} acquisti catalogo`);
+    if (syncCommercio.verificati) parti.push(`catalogo verificato ✓`);
     if ((protocollo.pozioniProdotte || []).length) parti.push(`${protocollo.pozioniProdotte.length} pozioni prodotte`);
     if ((protocollo.rettificheStaff || []).length) parti.push(`${protocollo.rettificheStaff.length} rettifiche`);
     if (risultatoCatalogo.applicate?.length) parti.push(`${risultatoCatalogo.applicate.length} modifiche oggetti`);
