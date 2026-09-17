@@ -1604,12 +1604,19 @@ function renderTrasferimentiDestinatari(trasferimenti) {
     return;
   }
 
+  const trasferimentiValidi = (trasferimenti || []).filter(t => t && t.validato !== false && !t.errore);
   const gruppi = new Map();
-  trasferimenti.forEach(t => {
+  trasferimentiValidi.forEach(t => {
     const key = `${t.recipientUrl || ''}|${t.recipientName || ''}`;
     if (!gruppi.has(key)) gruppi.set(key, []);
     gruppi.get(key).push(t);
   });
+  if (!gruppi.size) {
+    panel.style.display = 'none';
+    const tabBtn = document.getElementById('trasferimenti_tab_btn');
+    if (tabBtn) tabBtn.style.display = 'none';
+    return;
+  }
 
   let idx = 0;
   gruppi.forEach(items => {
@@ -1625,6 +1632,7 @@ function renderTrasferimentiDestinatari(trasferimenti) {
       <div style="font-weight:800; margin-bottom:8px;">${t0.recipientName || 'Destinatario'}</div>
       <textarea id="${inId}" style="min-height:150px;" placeholder="Incolla la Scheda Valori del destinatario..."></textarea>
       <button type="button" class="btn-secondary" data-genera-dest="${idx}" style="margin-top:8px;">Genera scheda destinatario →</button>
+      <div id="dest_warn_${idx}" style="display:none; margin-top:10px; padding:10px 12px; border-radius:8px; background:#fff1d6; color:#6b4300; font-size:13px;"></div>
       <textarea id="${outId}" class="output-box" readonly style="display:none; min-height:180px; margin-top:10px;"></textarea>
       <button type="button" class="btn-copia" id="${btnId}" style="display:none;" onclick="copiaCampo('${outId}','${btnId}')">📋 Copia scheda aggiornata</button>
     `;
@@ -1635,9 +1643,19 @@ function renderTrasferimentiDestinatari(trasferimenti) {
       const righe = items.map(t => {
         const categoria = (t.categoria || 'OGGETTO').toUpperCase().replace('À','A');
         const descrizione = pulisciTailOggettoPerTrasferimento(t.descrizione);
-        return `NUOVO ${categoria}: ${t.name} [${t.qty || 1}]: ${descrizione || 'trasferito da un altro PG'}`;
+        return `NUOVO ${categoria}: ${t.name} [${t.qty || 1}]${descrizione ? ': ' + descrizione : ''}`;
       }).join('\n');
       const res = aggiornaBagaglio(input, righe, []);
+      const warn = document.getElementById(`dest_warn_${idx}`);
+      if (warn) {
+        if (res.nonRiconosciute && res.nonRiconosciute.length) {
+          warn.innerHTML = '<b>Attenzione:</b><br>' + res.nonRiconosciute.map(escapeHtmlUI).join('<br>');
+          warn.style.display = 'block';
+        } else {
+          warn.innerHTML = '';
+          warn.style.display = 'none';
+        }
+      }
       const out = document.getElementById(outId);
       out.value = res.html;
       out.style.display = 'block';
@@ -1854,8 +1872,14 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
       const key = normalizeText(op.name);
       if (target.byName.has(key)) {
         const obj = target.byName.get(key);
+        const tailEsistente = pulisciTailOggettoPerTrasferimento(obj.tail || '');
+        const tailInArrivo = pulisciTailOggettoPerTrasferimento(op.desc || '');
+        if (tailInArrivo && tailEsistente && normalizeText(tailInArrivo) !== normalizeText(tailEsistente)) {
+          nonRiconosciute.push(`${op.name}: il destinatario possiede già lo stesso elemento con stato/descrizione differente; trasferimento da verificare manualmente`);
+          return;
+        }
         obj.qty += op.qty;
-        if (op.desc) obj.tail = ` ${op.desc}`;
+        if (!tailEsistente && tailInArrivo) obj.tail = ` ${op.desc}`;
       } else {
         target.byName.set(key, { name: op.name, qty: op.qty, tail: op.desc ? ` ${op.desc}` : '', bold: true });
       }
@@ -1863,25 +1887,56 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
     }
 
     const key = normalizeText(op.name);
-    const target = Object.values(sezioni).find(s => s.byName.has(key));
-    if (!target) { nonRiconosciute.push(`${op.name}: oggetto non trovato in nessuna sezione del Bagaglio`); return; }
+    const trasferimentoCandidato = op.delta < 0 ? trasferimenti.find((t, i) =>
+      !trasferimentiUsati.has(i) &&
+      normalizeText(t.name) === key &&
+      Math.abs(op.delta) === (t.qty || 1)
+    ) : null;
+    const categoriaPreferita = trasferimentoCandidato && trasferimentoCandidato.categoriaRichiesta;
+    const target = (categoriaPreferita && sezioni[categoriaPreferita] && sezioni[categoriaPreferita].byName.has(key))
+      ? sezioni[categoriaPreferita]
+      : Object.values(sezioni).find(s => s.byName.has(key));
+    if (!target) {
+      const msg = `${op.name}: oggetto non trovato in nessuna sezione del Bagaglio`;
+      nonRiconosciute.push(msg);
+      if (op.delta < 0) {
+        const idxTrasf = trasferimenti.findIndex((t, i) => !trasferimentiUsati.has(i) && normalizeText(t.name) === key && Math.abs(op.delta) === (t.qty || 1));
+        if (idxTrasf >= 0) {
+          trasferimentiUsati.add(idxTrasf);
+          trasferimenti[idxTrasf].validato = false;
+          trasferimenti[idxTrasf].errore = msg;
+        }
+      }
+      return;
+    }
     const obj = target.byName.get(key);
 
     if (op.type === 'qty') {
       // Se questa diminuzione corrisponde a un trasferimento rilevato nella Lista,
-      // salviamo PRIMA della sottrazione categoria e descrizione del bene ceduto.
+      // la Scheda del mittente è la fonte di verità: categoria, stato e quantità
+      // vengono catturati da qui prima di qualsiasi sottrazione.
+      let transferIdx = -1;
       if (op.delta < 0) {
-        const idx = trasferimenti.findIndex((t, i) =>
+        transferIdx = trasferimenti.findIndex((t, i) =>
           !trasferimentiUsati.has(i) &&
           normalizeText(t.name) === key &&
           Math.abs(op.delta) === (t.qty || 1)
         );
-        if (idx >= 0) {
-          trasferimentiUsati.add(idx);
-          trasferimenti[idx].categoria = target.cat.tag;
-          trasferimenti[idx].categoriaLabel = target.cat.label;
-          trasferimenti[idx].descrizione = obj.tail || '';
-          trasferimenti[idx].quantitaPrima = obj.qty || 0;
+        if (transferIdx >= 0) {
+          trasferimentiUsati.add(transferIdx);
+          const t = trasferimenti[transferIdx];
+          t.categoria = target.cat.tag;
+          t.categoriaLabel = target.cat.label;
+          t.descrizione = obj.tail || '';
+          t.quantitaPrima = obj.qty || 0;
+          t.preservaStato = true;
+          if ((obj.qty || 0) < (t.qty || 1)) {
+            t.validato = false;
+            t.errore = `${op.name}: quantità insufficiente per il trasferimento (${obj.qty || 0} posseduti, ${t.qty || 1} richiesti)`;
+            nonRiconosciute.push(t.errore);
+            return;
+          }
+          t.validato = true;
         }
       }
       obj.qty = Math.max(0, (obj.qty || 0) + op.delta);
@@ -2286,7 +2341,10 @@ function elaboraTerminale() {
     name: t.nome,
     qty: parseInt(t.quantita, 10) || 1,
     recipientUrl: t.destinatarioLink || '',
-    recipientName: t.destinatarioNome || ''
+    recipientName: t.destinatarioNome || '',
+    categoriaRichiesta: String(t.categoria || '').toUpperCase().replace('À','A'),
+    preservaStato: t.preservaStato !== false,
+    catalogProductId: t.catalogProductId || ''
   }));
 
   const deltas = estraiDeltaDaBoxA();
@@ -2337,7 +2395,10 @@ function elaboraTerminale() {
     if (risultatoConoscenze.richieste) parti.push(`${risultatoConoscenze.richieste} conoscenze`);
     if ((protocollo.catalogoAcquisti || []).length) parti.push(`${protocollo.catalogoAcquisti.length} acquisti catalogo`);
     if (risultatoCatalogo.applicate?.length) parti.push(`${risultatoCatalogo.applicate.length} modifiche oggetti`);
-    if (risultatoBagaglio.trasferimenti?.length) parti.push(`${risultatoBagaglio.trasferimenti.length} trasferimenti`);
+    if (risultatoBagaglio.trasferimenti?.length) {
+      const nTrasfValidi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore).length;
+      if (nTrasfValidi) parti.push(`${nTrasfValidi} trasferimenti`);
+    }
     execSummary.innerHTML = `<i class="fa-solid fa-circle-check"></i>&nbsp; ${protocollo.nomePg || 'PG'} elaborato · ${parti.join(' · ')}`;
     execSummary.classList.add('show');
   }
@@ -2347,7 +2408,10 @@ function elaboraTerminale() {
     const avvisiStat = [];
 
     if (risultatoBagaglio.trasferimenti && risultatoBagaglio.trasferimenti.length) {
-      avvisiStat.push('<b>📦 Trasferimento rilevato:</b> oggetto scalato dal PG corrente; accredito destinatario preparato sotto.');
+      const validi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore);
+      const invalidi = risultatoBagaglio.trasferimenti.filter(t => t.validato === false || t.errore);
+      if (validi.length) avvisiStat.push(`<b>📦 Trasferimento rilevato:</b> ${validi.length} ${validi.length === 1 ? 'oggetto scalato' : 'oggetti scalati'} dal PG corrente; accredito destinatario preparato sotto mantenendo lo stato presente nella Scheda del mittente.`);
+      if (invalidi.length) avvisiStat.push('<b>⚠ Trasferimenti non applicati:</b> ' + invalidi.map(t => escapeHtmlUI(t.errore || `${t.name}: trasferimento non validato`)).join('<br>'));
     }
 
     if (updatedValori.ignorati && updatedValori.ignorati.length) {
