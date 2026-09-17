@@ -1664,15 +1664,15 @@ function parseInventarioMods(raw) {
     // "NUOVO:" da solo resta Oggetto per compatibilita' con le richieste gia'
     // scritte prima che categoria diventasse obbligatoria; "NUOVO OGGETTO/POZIONE/IMMUNITA:"
     // specifica esplicitamente in quale sezione della scheda va inserito.
-    const mNuovoCat = entryPulita.match(/^NUOVO\s+(OGGETTO|POZIONE|IMMUNIT[AÀ])\s*:\s*(.+?)\s*\[(\d+)\]\s*:\s*(.*)$/i);
+    const mNuovoCat = entryPulita.match(/^NUOVO\s+(OGGETTO|POZIONE|IMMUNIT[AÀ])\s*:\s*(.+?)\s*\[(\d+)\](?:\s*:\s*(.*))?$/i);
     if (mNuovoCat) {
       const categoria = mNuovoCat[1].toUpperCase().replace('À', 'A');
-      ops.push({ type: 'new', categoria, name: mNuovoCat[2].trim(), qty: parseInt(mNuovoCat[3], 10) || 1, desc: mNuovoCat[4].trim() });
+      ops.push({ type: 'new', categoria, name: mNuovoCat[2].trim(), qty: parseInt(mNuovoCat[3], 10) || 1, desc: (mNuovoCat[4] || '').trim() });
       continue;
     }
     if (/^NUOVO\s*:/i.test(entryPulita)) {
-      const mLegacy = entryPulita.match(/^NUOVO\s*:\s*(.+?)\s*\[(\d+)\]\s*:\s*(.*)$/i);
-      if (mLegacy) { ops.push({ type: 'new', categoria: 'OGGETTO', name: mLegacy[1].trim(), qty: parseInt(mLegacy[2], 10) || 1, desc: mLegacy[3].trim() }); continue; }
+      const mLegacy = entryPulita.match(/^NUOVO\s*:\s*(.+?)\s*\[(\d+)\](?:\s*:\s*(.*))?$/i);
+      if (mLegacy) { ops.push({ type: 'new', categoria: 'OGGETTO', name: mLegacy[1].trim(), qty: parseInt(mLegacy[2], 10) || 1, desc: (mLegacy[3] || '').trim() }); continue; }
       nonRiconosciute.push(entryRaw);
       continue;
     }
@@ -1743,18 +1743,20 @@ function parseObjectLine(line) {
 }
 
 function rebuildObjectLine(obj) {
-  // Se l'oggetto proviene da una riga che aveva i due punti dentro </b> (il
-  // formato usato dalla scheda reale), lo riscrivo identico — non cambio la
-  // formattazione di un oggetto solo perche' lo stiamo aggiornando.
-  if (obj.colonInside) {
-    if (obj.noQtyBracket && obj.qty === 1) return `- <b>${obj.name}:</b>${obj.tail}`;
-    return `- <b>${obj.name} [${obj.qty}]:</b>${obj.tail}`;
+  // I due punti separano il nome/quantità dalle specifiche. Se non esiste
+  // alcuna specifica dopo la quantità, non devono essere generati.
+  const tail = String(obj.tail || '');
+  const haSpecifiche = tail.trim() !== '';
+
+  if (obj.noQtyBracket && obj.qty === 1) {
+    return haSpecifiche
+      ? `- <b>${obj.name}:</b>${tail}`
+      : `- <b>${obj.name}</b>`;
   }
-  if (obj.bold || !obj.raw) {
-    if (obj.noQtyBracket && obj.qty === 1) return `- <b>${obj.name}:</b>${obj.tail}`;
-    return `- <b>${obj.name} [${obj.qty}]:</b>${obj.tail}`;
-  }
-  return `- <b>${obj.name} [${obj.qty}]:</b>${obj.tail || ''}`;
+
+  return haSpecifiche
+    ? `- <b>${obj.name} [${obj.qty}]:</b>${tail}`
+    : `- <b>${obj.name} [${obj.qty}]</b>`;
 }
 
 function normalizzaTipoContatoreOggetto(raw) {
