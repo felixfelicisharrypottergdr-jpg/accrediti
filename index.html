@@ -643,7 +643,7 @@ function renderImportOverview(d) {
   const numeroConoscenze = conoscenze.reduce((tot, gruppo) => tot + (gruppo.conoscenze || []).length, 0);
 
   if (title) title.textContent = (d.nomePg || 'PG') + ' · ' + (d.tipoPg === 'studente' ? 'Studente' : 'Adulto');
-  if (meta) meta.textContent = Number(d.versione) === 2 ? 'FF-ACCREDITI-V2' : 'Formato BOX';
+  if (meta) meta.textContent = Number(d.versione) === 2 ? `FF-ACCREDITI-V2${d.catalogVersion ? ' · Catalogo v' + d.catalogVersion : ''}` : 'Formato BOX';
   if (chips) {
     const counts = [
       ['Variazioni', (d.boxA || []).length, 'fa-chart-line'],
@@ -652,6 +652,7 @@ function renderImportOverview(d) {
       ['Catalogo', (d.catalogoAcquisti || []).length, 'fa-store'],
       ['Bagaglio', (d.boxG || []).length, 'fa-suitcase'],
       ['Operazioni', (d.operazioniCatalogo || []).length, 'fa-screwdriver-wrench'],
+      ['Pozioni prodotte', (d.pozioniProdotte || []).length, 'fa-flask'],
       ['Trasferimenti', (d.trasferimenti || []).length, 'fa-arrow-right-arrow-left']
     ];
     chips.innerHTML = counts.map(([label,n,icon]) => `<span class="overview-chip${n ? '' : ' muted'}"><i class="fa-solid ${icon}"></i>${label}: ${n}</span>`).join('');
@@ -683,6 +684,8 @@ function renderImportOverview(d) {
     addRiga('Bagaglio riconosciuto', d.boxG || []);
     const opRighe = (d.operazioniCatalogo || []).map(o => `${o.tipo || 'Operazione'}${o.targetName ? ` → ${o.targetName}` : ''}`);
     addRiga('Operazioni su oggetti riconosciute', opRighe);
+    const pozProdRighe=(d.pozioniProdotte || []).map(p=>`${p.nome || 'Pozione'} ×${p.dosi || 1} · Forza ${p.forza || '?'} · ${p.creatore || '?'}`);
+    addRiga('Pozioni prodotte riconosciute', pozProdRighe);
 
     const trasfRighe = (d.trasferimenti || []).map(t => {
       const nome = t.nome || t.name || 'Oggetto';
@@ -1092,6 +1095,8 @@ function leggiProtocolloAccrediti(raw) {
         if (!Array.isArray(data.trasferimenti)) data.trasferimenti = [];
         if (!Array.isArray(data.catalogoAcquisti)) data.catalogoAcquisti = [];
         if (!Array.isArray(data.operazioniCatalogo)) data.operazioniCatalogo = [];
+        if (!Array.isArray(data.pozioniProdotte)) data.pozioniProdotte = [];
+        if (data.catalogVersion == null) data.catalogVersion = '';
         const dalPayload = normalizzaConoscenzeAccredito(data.conoscenzeAcquistate || []);
         data.conoscenzeAcquistate = dalPayload.length ? dalPayload : estraiConoscenzeDaLista(testo);
         return { ok: true, data };
@@ -1179,6 +1184,8 @@ function leggiProtocolloAccrediti(raw) {
       conoscenzeAcquistate: estraiConoscenzeDaLista(testo),
       catalogoAcquisti: [],
       operazioniCatalogo: [],
+      pozioniProdotte: [],
+      catalogVersion: '',
       galeoniExtraBase: null
     }
   };
@@ -1559,14 +1566,19 @@ function aggiornaSchedaConValori(html, data, deltas) {
 }
 
 function splitEntriesInventario(raw) {
-  // A differenza di Box E/F, qui NON splittiamo sulla virgola: i nomi degli
-  // oggetti possono contenerne una (es. "Paraorecchi Anti-Mandragola, di
-  // colore verde"), quindi ogni voce deve stare su una riga propria (o essere
-  // separata da ';').
-  return String(raw || '')
-    .split(/\n|;/)
-    .map(x => x.trim())
-    .filter(Boolean);
+  const testo=String(raw || '').replace(/\r/g,'').trim();
+  if(!testo) return [];
+  const righe=testo.split(/\n/).map(x=>x.trim()).filter(Boolean);
+  if(righe.length>1) return righe;
+
+  // Compatibilità col vecchio incolla-su-una-riga separato da ";".
+  // Il punto e virgola può però essere parte della descrizione di un oggetto
+  // (es. spazio occupato dalle dosi di una Pozione), quindi lo usiamo come
+  // separatore solo se TUTTI i frammenti risultano autonomamente comandi Box G.
+  const parti=testo.split(/\s*;\s*/).map(x=>x.trim()).filter(Boolean);
+  if(parti.length<=1) return [testo];
+  const sembraComando=x=>/^(?:-\s*)?(?:NUOVO(?:\s+(?:OGGETTO|POZIONE|IMMUNIT[AÀ]))?\s*:|CONTATORE\s+(?:USI|UTILIZZI|POST|ROLE)\s*:|USI\s*:|.+?\s*:\s*[+-]?\d+(?:\s*[—–-]\s*oggetto\s+da\s+trasferire\s+a\s*\[URL=)?)/i.test(x);
+  return parti.every(sembraComando) ? parti : [testo];
 }
 
 const CATEGORIE_BAGAGLIO = [
@@ -2213,22 +2225,93 @@ function tailAggiungiSegmento(tail, testo) {
   return ' ' + base.replace(/^\s+/, '').replace(/\s*\|\s*$/, '') + ' | ' + seg;
 }
 
-function modificaRigaOggettoPerNome(html, targetName, mutator) {
+function datiSezioneOggettiPerNome(html, targetName, categoriaTag) {
+  const cat = String(categoriaTag || 'OGGETTO').toUpperCase();
+  const icone = {OGGETTO:'fa-broom-ball', POZIONE:'fa-flask-vial', IMMUNITA:'fa-disease'};
+  const sez = estraiSezioneBagaglio(html, icone[cat] || icone.OGGETTO);
   const target = normalizeText(targetName || '');
-  if (!target) return { html, trovato:false, dettaglio:'bersaglio non indicato' };
-  let trovato = false;
-  let dettaglio = '';
-  const righe = String(html || '').split('\n');
-  const nuove = righe.map(line => {
-    if (trovato) return line;
-    const obj = parseObjectLine(line);
-    if (!obj || normalizeText(obj.name) !== target) return line;
-    const res = mutator({ ...obj }) || { obj };
-    trovato = true;
-    dettaglio = res.dettaglio || '';
-    return rebuildObjectLine(res.obj || obj);
-  });
-  return { html: nuove.join('\n'), trovato, dettaglio };
+  if (!sez || !target) return {sez, linee:[], matches:[]};
+  const linee = sez.body.split(/\n/);
+  const matches=[];
+  linee.forEach((line,index)=>{const obj=parseObjectLine(line); if(obj && normalizeText(obj.name)===target) matches.push({index,obj});});
+  return {sez,linee,matches};
+}
+function sostituisciCorpoSezione(html, dati, linee) {
+  return String(html || '').replace(dati.sez.rx, `${dati.sez.start}${linee.join('\n')}${dati.sez.end}`);
+}
+function descriviErroreMatch(targetName, dati, tipoLabel) {
+  const nome = targetName || 'non indicato';
+  if (!dati.sez) return `${tipoLabel}: sezione Oggetti del Bagaglio non trovata.`;
+  if (!dati.matches.length) return `${tipoLabel}: oggetto bersaglio “${nome}” non trovato nella sezione Oggetti.`;
+  if (dati.matches.length > 1) return `${tipoLabel}: trovate ${dati.matches.length} righe chiamate “${nome}”; modifica non applicata perché il bersaglio non è univoco.`;
+  return '';
+}
+function modificaRigaOggettoPerNome(html, targetName, mutator) {
+  const dati=datiSezioneOggettiPerNome(html,targetName,'OGGETTO');
+  if (dati.matches.length !== 1) return {html,trovato:false,ambiguo:dati.matches.length>1,numeroCorrispondenze:dati.matches.length,dettaglio:descriviErroreMatch(targetName,dati,'BERSAGLIO')};
+  const match=dati.matches[0];
+  const res=mutator({...match.obj}) || {obj:match.obj};
+  if (res.errore) return {html,trovato:false,errore:res.errore,numeroCorrispondenze:1,dettaglio:res.errore};
+  const linee=[...dati.linee]; linee[match.index]=rebuildObjectLine(res.obj || match.obj);
+  return {html:sostituisciCorpoSezione(html,dati,linee),trovato:true,ambiguo:false,numeroCorrispondenze:1,dettaglio:res.dettaglio || ''};
+}
+function formattaDataItalianaISO(iso) {
+  const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m?`${m[3]}/${m[2]}/${m[1]}`:String(iso||'');
+}
+function aggiungiUnAnnoISO(iso) {
+  const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return '';
+  const y=Number(m[1])+1, mo=Number(m[2]), d=Number(m[3]);
+  const max=new Date(y,mo,0).getDate();
+  return `${y}-${String(mo).padStart(2,'0')}-${String(Math.min(d,max)).padStart(2,'0')}`;
+}
+function applicaOggettoPosseduto(html, op) {
+  const sourceName=String(op.sourceName || '').trim(), targetName=String(op.targetName || '').trim();
+  const qty=Math.max(1,parseInt(op.quantita,10)||1);
+  const src=datiSezioneOggettiPerNome(html,sourceName,'OGGETTO');
+  const tgt=datiSezioneOggettiPerNome(html,targetName,'OGGETTO');
+  const errSrc=descriviErroreMatch(sourceName,src,'UTILIZZO');
+  const errTgt=descriviErroreMatch(targetName,tgt,'UTILIZZO');
+  if(errSrc) return {html,ok:false,errore:errSrc};
+  if(errTgt) return {html,ok:false,errore:errTgt};
+  const sm=src.matches[0], tm=tgt.matches[0];
+  if(src.sez.start !== tgt.sez.start || src.sez.body !== tgt.sez.body) return {html,ok:false,errore:'UTILIZZO: sorgente e bersaglio non sono stati risolti nella stessa sezione Oggetti.'};
+  if(sm.index===tm.index) return {html,ok:false,errore:`UTILIZZO: “${sourceName}” non può essere contemporaneamente oggetto consumato e bersaglio.`};
+  if((sm.obj.qty||1)<qty) return {html,ok:false,errore:`UTILIZZO: ${sourceName} disponibile ×${sm.obj.qty||1}, richiesto ×${qty}. Nessuna modifica applicata.`};
+
+  const productId=String(op.productId||'');
+  if(productId !== 'OBJ-013' && qty !== 1) return {html,ok:false,errore:`UTILIZZO: ${sourceName} va applicato una unità alla volta; quantità richiesta ${qty}.`};
+  const targetObj={...tm.obj};
+  let dettaglio='';
+  if(productId==='OBJ-013') {
+    const tail=String(targetObj.tail||'');
+    const mc=tail.match(/Kit\s+di\s+manutenzione\s*:\s*(\d+)\s*\/\s*5/i);
+    const attuali=mc?parseInt(mc[1],10)||0:0;
+    if(attuali+qty>5) return {html,ok:false,errore:`UTILIZZO: ${targetName} ha già ${attuali}/5 Kit di manutenzione; l'operazione supererebbe il limite massimo.`};
+    const res=aggiornaResistenzaTail(targetObj.tail||'',50*qty); targetObj.tail=res.tail;
+    targetObj.tail=mc ? targetObj.tail.replace(/Kit\s+di\s+manutenzione\s*:\s*\d+\s*\/\s*5/i,`Kit di manutenzione: ${attuali+qty}/5`) : tailAggiungiSegmento(targetObj.tail,`Kit di manutenzione: ${attuali+qty}/5`);
+    dettaglio=`+${50*qty} Resistenza · Kit ${attuali+qty}/5`;
+  } else if(productId==='OBJ-012') {
+    if(/Cera\s+Anti-Malocchio/i.test(targetObj.tail||'')) return {html,ok:false,errore:`UTILIZZO: ${targetName} ha già una Cera Anti-Malocchio attiva; verifica prima il contatore.`};
+    targetObj.tail=tailAggiungiSegmento(targetObj.tail,'Cera Anti-Malocchio (0/50 post)'); dettaglio='Cera Anti-Malocchio (0/50 post)';
+  } else if(productId==='OBJ-014') {
+    if(/Antifurto\s+Magico\s+fino\s+al/i.test(targetObj.tail||'')) return {html,ok:false,errore:`UTILIZZO: ${targetName} ha già un Antifurto Magico registrato; verifica la scadenza prima di installarne un altro.`};
+    const start=String(op.dataApplicazione||''); const end=aggiungiUnAnnoISO(start);
+    if(!start || !end) return {html,ok:false,errore:'UTILIZZO: data di installazione dell’Antifurto Magico mancante o non valida.'};
+    targetObj.tail=tailAggiungiSegmento(targetObj.tail,`Antifurto Magico fino al ${formattaDataItalianaISO(end)}`); dettaglio=`Antifurto fino al ${formattaDataItalianaISO(end)}`;
+  } else if(['OBJ-061','OBJ-062','OBJ-063','OBJ-064'].includes(productId)) {
+    const label=String(op.sourceName||'Trattamento');
+    if(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(targetObj.tail||'')) return {html,ok:false,errore:`UTILIZZO: ${label} risulta già presente sul bersaglio “${targetName}”; verifica il contatore prima di applicarne un altro.`};
+    targetObj.tail=tailAggiungiSegmento(targetObj.tail,`${label}: ${op.effetto || 'effetto attivo'} (0/5 post)`); dettaglio=`${label} (0/5 post)`;
+  } else {
+    targetObj.tail=tailAggiungiSegmento(targetObj.tail,`${op.sourceName || 'Oggetto applicato'}${op.effetto?': '+op.effetto:''}`); dettaglio=op.effetto || 'effetto applicato';
+  }
+
+  const linee=[...src.linee];
+  const sourceObj={...sm.obj,qty:(sm.obj.qty||1)-qty};
+  linee[tm.index]=rebuildObjectLine(targetObj);
+  linee[sm.index]=sourceObj.qty>0?rebuildObjectLine(sourceObj):'';
+  const pulite=linee.filter((line,i)=>i!==sm.index || sourceObj.qty>0);
+  return {html:sostituisciCorpoSezione(html,src,pulite),ok:true,dettaglio:`${sourceName} ×${qty} → ${targetName} · ${dettaglio}`};
 }
 
 function aggiornaResistenzaTail(tail, delta) {
@@ -2266,13 +2349,18 @@ function applicaOperazioniCatalogo(html, operazioni) {
   (Array.isArray(operazioni)?operazioni:[]).forEach(op => {
     const tipo=String(op?.tipo || '').toUpperCase();
     if (!tipo) return;
+    if (tipo === 'APPLICA_OGGETTO') {
+      const res=applicaOggettoPosseduto(out,op);
+      if(res.ok){out=res.html;applicate.push(`APPLICA_OGGETTO: ${res.dettaglio}`);} else avvisi.push(res.errore || `APPLICA_OGGETTO: operazione non applicata.`);
+      return;
+    }
     if (tipo === 'RECUPERA_RESISTENZA') {
       const delta=Number(op.valore)||0;
       const res=modificaRigaOggettoPerNome(out,op.targetName,obj=>{
         const upd=aggiornaResistenzaTail(obj.tail||'',delta); obj.tail=upd.tail;
         return {obj,dettaglio:upd.trovato?`Resistenza ${formatNumeroItaliano(upd.prima)} → ${formatNumeroItaliano(upd.dopo)}`:`aggiunto +${formatNumeroItaliano(delta)} Resistenza`};
       });
-      if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName}${res.dettaglio?' · '+res.dettaglio:''}`);} else avvisi.push(`${tipo}: oggetto bersaglio “${op.targetName || 'non indicato'}” non trovato.`);
+      if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName}${res.dettaglio?' · '+res.dettaglio:''}`);} else avvisi.push(res.dettaglio || `${tipo}: oggetto bersaglio “${op.targetName || 'non indicato'}” non trovato.`);
       return;
     }
     if (tipo === 'RIPARAZIONE_MONDOMAGO' || tipo === 'RIPARAZIONE_MAGIE_SINISTER') {
@@ -2283,7 +2371,7 @@ function applicaOperazioniCatalogo(html, operazioni) {
         if(tipo==='RIPARAZIONE_MAGIE_SINISTER' && !/oggetto\s+illegale/i.test(obj.tail||'')) obj.tail=tailAggiungiSegmento(obj.tail,'Oggetto Illegale');
         return {obj,dettaglio:`${upd.count} bonus/malus aggiornati`};
       });
-      if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName} · ${res.dettaglio}`); if(/0 bonus\/malus/.test(res.dettaglio)) avvisi.push(`${tipo}: “${op.targetName}” trovato, ma non sono stati riconosciuti bonus/malus numerici con segno +/− da trasformare.`);} else avvisi.push(`${tipo}: oggetto bersaglio “${op.targetName || 'non indicato'}” non trovato.`);
+      if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName} · ${res.dettaglio}`); if(/0 bonus\/malus/.test(res.dettaglio)) avvisi.push(`${tipo}: “${op.targetName}” trovato, ma non sono stati riconosciuti bonus/malus numerici con segno +/− da trasformare.`);} else avvisi.push(res.dettaglio || `${tipo}: oggetto bersaglio “${op.targetName || 'non indicato'}” non trovato.`);
       return;
     }
     if (tipo === 'SOSTITUISCI_SIDECAR') {
@@ -2293,14 +2381,14 @@ function applicaOperazioniCatalogo(html, operazioni) {
         else t=tailAggiungiSegmento(t,'Sidecar sostituito');
         obj.tail=t; return {obj,dettaglio:'sidecar sostituito'};
       });
-      if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName}`);} else avvisi.push(`${tipo}: motocicletta bersaglio “${op.targetName || 'non indicato'}” non trovata.`);
+      if(res.trovato){out=res.html;applicate.push(`${tipo}: ${op.targetName}`);} else avvisi.push(res.dettaglio || `${tipo}: motocicletta bersaglio “${op.targetName || 'non indicato'}” non trovata.`);
       return;
     }
     if (tipo === 'CONFIGURA_POSTI') {
       const target=op.targetName || (String(op.targetType).includes('POZIONISTA')?'Valigetta del Pozionista':'Valigia Magica');
       const label=`+1 posto fino a ${op.classificazione || '?'}${op.sostituisce?` (sostituisce 1 posto ${op.sostituisce})`:''}`;
       const res=modificaRigaOggettoPerNome(out,target,obj=>{obj.tail=tailAggiungiSegmento(obj.tail,label);return {obj,dettaglio:label};});
-      if(res.trovato){out=res.html;applicate.push(`CONFIGURA_POSTI: ${target} · ${label}`);} else avvisi.push(`CONFIGURA_POSTI: “${target}” non trovata nella Scheda.`);
+      if(res.trovato){out=res.html;applicate.push(`CONFIGURA_POSTI: ${target} · ${label}`);} else avvisi.push(res.dettaglio || `CONFIGURA_POSTI: “${target}” non trovata nella Scheda.`);
       return;
     }
     if (tipo === 'EFFETTO_SCHEDA') {
@@ -2394,6 +2482,7 @@ function elaboraTerminale() {
     ];
     if (risultatoConoscenze.richieste) parti.push(`${risultatoConoscenze.richieste} conoscenze`);
     if ((protocollo.catalogoAcquisti || []).length) parti.push(`${protocollo.catalogoAcquisti.length} acquisti catalogo`);
+    if ((protocollo.pozioniProdotte || []).length) parti.push(`${protocollo.pozioniProdotte.length} pozioni prodotte`);
     if (risultatoCatalogo.applicate?.length) parti.push(`${risultatoCatalogo.applicate.length} modifiche oggetti`);
     if (risultatoBagaglio.trasferimenti?.length) {
       const nTrasfValidi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore).length;
