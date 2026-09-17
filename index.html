@@ -456,30 +456,59 @@
 
     
 
-        /* Rettifiche Staff */
-        .rettifiche-panel { display:none; margin-top:18px; border:1px solid rgba(116,86,128,.22); background:#FBF8FC; border-radius:16px; padding:16px; }
+        /* Rettifiche Staff · UX compatta */
+        .rettifiche-panel { display:none; margin-top:14px; border:1px solid rgba(116,86,128,.20); background:#FBF8FC; border-radius:14px; overflow:hidden; }
         .rettifiche-panel.show { display:block; }
-        .rettifiche-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:12px; }
-        .rettifiche-title { font-weight:800; color:#3C2A43; display:flex; align-items:center; gap:8px; }
-        .rettifiche-help { font-size:12px; line-height:1.45; color:#6B5A70; max-width:680px; }
-        .rettifiche-groups { display:grid; gap:14px; }
-        .rettifiche-group { border-top:1px solid rgba(116,86,128,.15); padding-top:12px; }
+        .rettifiche-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 14px; background:linear-gradient(90deg,#F7F1F9,#FCFAFD); }
+        .rettifiche-head-main { min-width:0; }
+        .rettifiche-title { font-weight:850; color:#3C2A43; display:flex; align-items:center; gap:8px; }
+        .rettifiche-badge { display:inline-flex; align-items:center; min-height:22px; padding:2px 8px; border-radius:999px; background:#EEE6F1; color:#684D72; font-size:11px; font-weight:850; }
+        .rettifiche-badge.active { background:#FFF0C7; color:#6C5015; }
+        .rettifiche-help { margin-top:3px; font-size:11.5px; line-height:1.35; color:#6B5A70; }
+        .rettifiche-head-actions { display:flex; align-items:center; gap:7px; flex:0 0 auto; }
+        .rettifiche-mini-btn { min-height:34px; padding:7px 10px; border:1px solid #D8CEDC; border-radius:9px; background:#fff; color:#4A3850; font:inherit; font-size:11.5px; font-weight:800; cursor:pointer; }
+        .rettifiche-mini-btn:hover { border-color:#9E82A8; background:#F7F1F9; box-shadow:none; transform:none; }
+        .rettifiche-mini-btn.danger { color:#8A433C; border-color:#E4C7C2; background:#FFF9F8; }
+        .rettifiche-body { display:none; border-top:1px solid rgba(116,86,128,.14); padding:12px 14px 14px; }
+        .rettifiche-body.open { display:block; }
+        .rettifiche-toolbar { display:flex; align-items:center; gap:8px; margin-bottom:11px; }
+        .rettifiche-search-wrap { position:relative; flex:1; }
+        .rettifiche-search-wrap i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#8B7B90; font-size:11px; }
+        .rettifiche-search { width:100%; box-sizing:border-box; min-height:36px; padding:7px 10px 7px 30px; border:1px solid #D8CEDC; border-radius:9px; background:#fff; color:#2E2531; font:inherit; font-size:12px; }
+        .rettifiche-search:focus { outline:2px solid rgba(116,86,128,.14); border-color:#745680; }
+        .rettifiche-groups { display:grid; gap:12px; }
+        .rettifiche-group { border-top:1px solid rgba(116,86,128,.12); padding-top:10px; }
         .rettifiche-group:first-child { border-top:0; padding-top:0; }
-        .rettifiche-group-title { font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:800; color:#745680; margin-bottom:8px; }
-        .rettifica-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px 14px; padding:11px; border:1px solid rgba(116,86,128,.14); border-radius:12px; background:white; margin-bottom:8px; transition:.18s ease; }
-        .rettifica-row.changed { border-color:#C99A39; background:#FFF9EB; box-shadow:0 0 0 2px rgba(201,154,57,.08); }
-        .rettifica-col label { display:block; margin:0 0 5px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#7A6B7E; }
-        .rettifica-originale { min-height:40px; padding:9px 10px; border-radius:9px; background:#F3EEF5; color:#4F4352; font-size:13px; line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; }
-        .rettifica-row textarea { width:100%; min-height:58px; resize:vertical; padding:9px 10px; border:1px solid #D8CEDC; border-radius:9px; background:#fff; color:#2E2531; font:inherit; font-size:13px; line-height:1.4; box-sizing:border-box; }
-        .rettifica-row textarea:focus, .rettifica-row input:focus { outline:2px solid rgba(116,86,128,.18); border-color:#745680; }
-        .rettifica-motivo-wrap { grid-column:1 / -1; display:none; }
+        .rettifiche-group-title { display:flex; align-items:center; gap:6px; font-size:11px; text-transform:uppercase; letter-spacing:.07em; font-weight:850; color:#745680; margin:0 0 7px 2px; }
+        .rettifica-row { padding:9px 10px; border:1px solid rgba(116,86,128,.13); border-radius:11px; background:white; margin-bottom:7px; transition:.16s ease; }
+        .rettifica-row.changed { border-color:#C99A39; background:#FFF9EB; box-shadow:0 0 0 2px rgba(201,154,57,.06); }
+        .rettifica-line { display:grid; grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) 34px; gap:7px; align-items:end; }
+        .rettifica-col label { display:block; margin:0 0 4px; font-size:9.5px; font-weight:850; text-transform:uppercase; letter-spacing:.065em; color:#847589; }
+        .rettifica-originale { height:36px; box-sizing:border-box; padding:8px 9px; border-radius:8px; background:#F3EEF5; color:#4F4352; font-size:12px; line-height:20px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .rettifica-arrow { display:flex; align-items:center; justify-content:center; height:36px; color:#9A879F; font-size:12px; }
+        .rettifica-edit { width:100%; height:36px; box-sizing:border-box; padding:7px 9px; border:1px solid #D8CEDC; border-radius:8px; background:#fff; color:#2E2531; font:inherit; font-size:12px; }
+        .rettifica-edit:focus, .rettifica-motivo-wrap input:focus { outline:2px solid rgba(116,86,128,.14); border-color:#745680; }
+        .rettifica-reset { height:36px; width:34px; padding:0; border:1px solid #E1D8E4; border-radius:8px; background:#fff; color:#806E85; cursor:pointer; visibility:hidden; }
+        .rettifica-row.changed .rettifica-reset { visibility:visible; }
+        .rettifica-reset:hover { background:#F5EFF7; box-shadow:none; transform:none; }
+        .rettifica-motivo-wrap { display:none; margin-top:8px; padding-top:8px; border-top:1px dashed rgba(201,154,57,.35); }
         .rettifica-row.changed .rettifica-motivo-wrap { display:block; }
-        .rettifica-motivo-wrap input { width:100%; box-sizing:border-box; border:1px solid #D8CEDC; border-radius:9px; padding:9px 10px; font:inherit; font-size:13px; }
-        .rettifica-required { color:#9C3B32; font-size:11px; margin-top:4px; display:none; }
+        .rettifica-motivo-wrap label { display:block; margin-bottom:4px; font-size:10px; font-weight:850; color:#6E581F; }
+        .rettifica-motivo-wrap input { width:100%; box-sizing:border-box; min-height:34px; border:1px solid #DFC98F; border-radius:8px; padding:7px 9px; background:#FFFDF7; font:inherit; font-size:12px; }
+        .rettifica-required { color:#9C3B32; font-size:10px; margin-top:4px; display:none; }
         .rettifica-row.changed.missing-reason .rettifica-required { display:block; }
-        .rettifiche-summary { display:none; margin-top:10px; padding:9px 11px; border-radius:10px; background:#FFF1C9; color:#5F4711; font-size:12px; font-weight:700; }
+        .rettifiche-summary { display:none; margin-top:10px; padding:8px 10px; border-radius:9px; background:#FFF1C9; color:#5F4711; font-size:11px; font-weight:800; }
         .rettifiche-summary.show { display:block; }
-        @media (max-width:760px) { .rettifica-row { grid-template-columns:1fr; } .rettifica-motivo-wrap { grid-column:1; } }
+        .rettifica-row.search-hidden, .rettifiche-group.search-hidden { display:none; }
+        @media (max-width:760px) {
+            .rettifiche-head { align-items:flex-start; flex-direction:column; }
+            .rettifiche-head-actions { width:100%; }
+            .rettifiche-head-actions .rettifiche-mini-btn { flex:1; }
+            .rettifica-line { grid-template-columns:1fr 28px; align-items:end; }
+            .rettifica-arrow { display:none; }
+            .rettifica-col { grid-column:1 / -1; }
+            .rettifica-reset { grid-column:2; grid-row:2; }
+        }
 </style>
 </head>
 <body>
@@ -534,13 +563,22 @@
 
         <div class="rettifiche-panel" id="rettifiche_panel" aria-live="polite">
             <div class="rettifiche-head">
-                <div>
-                    <div class="rettifiche-title"><i class="fa-solid fa-pen-ruler"></i> Rettifiche Staff</div>
-                    <div class="rettifiche-help">La colonna <b>Richiesto dal PG</b> resta invariata. Modifica soltanto <b>Da accreditare</b> quando la richiesta non è corretta. Se una riga viene rettificata, il motivo è obbligatorio e sarà riportato nel Registro Accrediti.</div>
+                <div class="rettifiche-head-main">
+                    <div class="rettifiche-title"><i class="fa-solid fa-pen-ruler"></i> Rettifiche Staff <span class="rettifiche-badge" id="rettifiche_badge">0 rettifiche</span></div>
+                    <div class="rettifiche-help">Apri solo se devi correggere ciò che sarà effettivamente accreditato. La richiesta originale resta sempre invariata.</div>
+                </div>
+                <div class="rettifiche-head-actions">
+                    <button type="button" class="rettifiche-mini-btn danger" id="rettifiche_reset_all_btn" onclick="resetTutteRettifiche()" style="display:none;"><i class="fa-solid fa-rotate-left"></i>&nbsp; Ripristina</button>
+                    <button type="button" class="rettifiche-mini-btn" id="rettifiche_toggle_btn" onclick="toggleRettifichePanel()"><i class="fa-solid fa-sliders"></i>&nbsp; Rettifica una voce</button>
                 </div>
             </div>
-            <div class="rettifiche-groups" id="rettifiche_groups"></div>
-            <div class="rettifiche-summary" id="rettifiche_summary"></div>
+            <div class="rettifiche-body" id="rettifiche_body">
+                <div class="rettifiche-toolbar">
+                    <div class="rettifiche-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="search" class="rettifiche-search" id="rettifiche_search" placeholder="Cerca parametro, valuta, voto, sapienza o oggetto…" oninput="filtraRettifiche(this.value)"></div>
+                </div>
+                <div class="rettifiche-groups" id="rettifiche_groups"></div>
+                <div class="rettifiche-summary" id="rettifiche_summary"></div>
+            </div>
         </div>
     </div>
 
@@ -602,7 +640,7 @@
             <div class="result-card">
                 <div class="result-card-head">
                     <div class="result-card-title">Registro Accrediti</div>
-                    <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')"><i class="fa-regular fa-copy"></i>&nbsp; Copia</button>
+                    <button type="button" class="btn-copia" id="btn_copia_forum" onclick="copiaCampo('outForum','btn_copia_forum')"><i class="fa-regular fa-copy"></i>&nbsp; Copia Registro</button>
                 </div>
                 <textarea id="outForum" class="output-box" readonly></textarea>
             </div>
@@ -612,7 +650,7 @@
             <div class="result-card">
                 <div class="result-card-head">
                     <div class="result-card-title">Scheda Valori aggiornata</div>
-                    <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')"><i class="fa-regular fa-copy"></i>&nbsp; Copia</button>
+                    <button type="button" class="btn-copia" id="btn_copia_scheda" onclick="copiaCampo('outScheda','btn_copia_scheda')"><i class="fa-regular fa-copy"></i>&nbsp; Copia Scheda</button>
                 </div>
                 <textarea id="outScheda" class="output-box" readonly></textarea>
             </div>
@@ -670,12 +708,13 @@ function escapeHtmlUI(v) {
 
 
 const RETTIFICHE_BOX_LABELS = {
-  A: 'BOX A · Variazioni',
-  E: 'BOX E · Voti',
-  F: 'BOX F · Sapienze',
-  G: 'BOX G · Bagaglio'
+  A: 'Parametri e valute',
+  E: 'Voti',
+  F: 'Sapienze',
+  G: 'Bagaglio, Pozioni e Immunità'
 };
 let rettificheStaffState = { signature:'', rows:{} };
+let rettificheUiAperte = false;
 
 function firmaProtocolloRettifiche(d) {
   if (!d) return '';
@@ -722,18 +761,81 @@ function aggiornaRettificaStaff(key, campo, valore) {
   aggiornaStatoWorkspace();
 }
 
+function toggleRettifichePanel(forza) {
+  const body = document.getElementById('rettifiche_body');
+  const btn = document.getElementById('rettifiche_toggle_btn');
+  if (!body) return;
+  rettificheUiAperte = typeof forza === 'boolean' ? forza : !rettificheUiAperte;
+  body.classList.toggle('open', rettificheUiAperte);
+  if (btn) btn.innerHTML = rettificheUiAperte
+    ? '<i class="fa-solid fa-chevron-up"></i>&nbsp; Nascondi rettifiche'
+    : '<i class="fa-solid fa-sliders"></i>&nbsp; Rettifica una voce';
+  if (rettificheUiAperte) {
+    setTimeout(() => document.getElementById('rettifiche_search')?.focus(), 0);
+  }
+}
+
+function resetRettifica(key) {
+  const row = rettificheStaffState.rows[key];
+  if (!row) return;
+  row.accreditato = row.richiesto;
+  row.motivo = '';
+  const el = document.querySelector(`.rettifica-row[data-rettifica-key="${CSS.escape(key)}"]`);
+  if (el) {
+    const input = el.querySelector('[data-rettifica-field="accreditato"]');
+    const motivo = el.querySelector('[data-rettifica-field="motivo"]');
+    if (input) input.value = row.richiesto;
+    if (motivo) motivo.value = '';
+    el.classList.remove('changed','missing-reason');
+  }
+  aggiornaRiepilogoRettifiche();
+  aggiornaStatoWorkspace();
+}
+
+function resetTutteRettifiche() {
+  const changed = elencoRettificheStaff();
+  if (!changed.length) return;
+  if (changed.length > 1 && !confirm(`Ripristinare tutte le ${changed.length} rettifiche?`)) return;
+  changed.forEach(r => resetRettifica(`${r.box}:${r.index}`));
+}
+
+function filtraRettifiche(query) {
+  const q = normalizeText(String(query || ''));
+  document.querySelectorAll('.rettifiche-group').forEach(group => {
+    let visibili = 0;
+    group.querySelectorAll('.rettifica-row').forEach(rowEl => {
+      const key = rowEl.dataset.rettificaKey || '';
+      const row = rettificheStaffState.rows[key];
+      const hay = normalizeText(`${row?.richiesto || ''} ${row?.accreditato || ''} ${row?.motivo || ''}`);
+      const show = !q || hay.includes(q);
+      rowEl.classList.toggle('search-hidden', !show);
+      if (show) visibili++;
+    });
+    group.classList.toggle('search-hidden', visibili === 0);
+  });
+}
+
 function aggiornaRiepilogoRettifiche() {
   const summary = document.getElementById('rettifiche_summary');
-  if (!summary) return;
+  const badge = document.getElementById('rettifiche_badge');
+  const resetAll = document.getElementById('rettifiche_reset_all_btn');
   const changed = elencoRettificheStaff();
+  const mancanti = changed.filter(r => !String(r.motivo || '').trim()).length;
+  if (badge) {
+    badge.textContent = `${changed.length} ${changed.length === 1 ? 'rettifica' : 'rettifiche'}`;
+    badge.classList.toggle('active', changed.length > 0);
+  }
+  if (resetAll) resetAll.style.display = changed.length ? 'inline-flex' : 'none';
+  if (!summary) return;
   if (!changed.length) {
     summary.classList.remove('show');
     summary.textContent = '';
     return;
   }
-  const mancanti = changed.filter(r => !String(r.motivo || '').trim()).length;
   summary.classList.add('show');
-  summary.textContent = `${changed.length} ${changed.length === 1 ? 'rettifica attiva' : 'rettifiche attive'}${mancanti ? ` · ${mancanti} senza motivo` : ' · motivazioni complete'}`;
+  summary.textContent = mancanti
+    ? `${changed.length} ${changed.length === 1 ? 'modifica attiva' : 'modifiche attive'} · ${mancanti} ${mancanti === 1 ? 'motivo mancante' : 'motivi mancanti'}`
+    : `${changed.length} ${changed.length === 1 ? 'modifica pronta' : 'modifiche pronte'} per l’accredito`;
 }
 
 function renderRettificheStaff(d) {
@@ -744,23 +846,31 @@ function renderRettificheStaff(d) {
     panel.classList.remove('show');
     groups.innerHTML='';
     rettificheStaffState={signature:'',rows:{}};
+    rettificheUiAperte=false;
+    toggleRettifichePanel(false);
     aggiornaRiepilogoRettifiche();
     return;
   }
+  const oldSignature = rettificheStaffState.signature;
   inizializzaRettificheStaff(d);
+  if (oldSignature && oldSignature !== rettificheStaffState.signature) rettificheUiAperte = false;
   const html=[];
   ['A','E','F','G'].forEach(box => {
     const righe = Object.values(rettificheStaffState.rows).filter(r => r.box === box);
     if (!righe.length) return;
-    html.push(`<div class="rettifiche-group"><div class="rettifiche-group-title">${escapeHtmlUI(RETTIFICHE_BOX_LABELS[box])}</div>`);
+    html.push(`<div class="rettifiche-group" data-rettifica-group="${box}"><div class="rettifiche-group-title"><i class="fa-solid ${box === 'A' ? 'fa-coins' : box === 'E' ? 'fa-graduation-cap' : box === 'F' ? 'fa-book-open' : 'fa-suitcase'}"></i>${escapeHtmlUI(RETTIFICHE_BOX_LABELS[box])}</div>`);
     righe.forEach(row => {
       const key=`${row.box}:${row.index}`;
       const changed=rettificaCambiata(row);
       const missing=changed && !String(row.motivo || '').trim();
       html.push(`<div class="rettifica-row${changed?' changed':''}${missing?' missing-reason':''}" data-rettifica-key="${escapeHtmlUI(key)}">` +
-        `<div class="rettifica-col"><label>Richiesto dal PG</label><div class="rettifica-originale">${escapeHtmlUI(row.richiesto)}</div></div>` +
-        `<div class="rettifica-col"><label>Da accreditare</label><textarea data-rettifica-field="accreditato">${escapeHtmlUI(row.accreditato)}</textarea></div>` +
-        `<div class="rettifica-motivo-wrap"><label>Motivo della rettifica</label><input type="text" data-rettifica-field="motivo" value="${escapeHtmlUI(row.motivo)}" placeholder="Es. spettano 3,5 PP anziché 7"><div class="rettifica-required">Inserisci il motivo della rettifica.</div></div>` +
+        `<div class="rettifica-line">` +
+          `<div class="rettifica-col"><label>Richiesto</label><div class="rettifica-originale" title="${escapeHtmlUI(row.richiesto)}">${escapeHtmlUI(row.richiesto)}</div></div>` +
+          `<div class="rettifica-arrow"><i class="fa-solid fa-arrow-right"></i></div>` +
+          `<div class="rettifica-col"><label>Da accreditare</label><input class="rettifica-edit" type="text" data-rettifica-field="accreditato" value="${escapeHtmlUI(row.accreditato)}"></div>` +
+          `<button type="button" class="rettifica-reset" data-rettifica-reset="${escapeHtmlUI(key)}" title="Ripristina il valore richiesto"><i class="fa-solid fa-rotate-left"></i></button>` +
+        `</div>` +
+        `<div class="rettifica-motivo-wrap"><label>Motivo</label><input type="text" data-rettifica-field="motivo" value="${escapeHtmlUI(row.motivo)}" placeholder="Es. spettano 3,5 PP anziché 7"><div class="rettifica-required">Inserisci il motivo prima di generare i risultati.</div></div>` +
         `</div>`);
     });
     html.push('</div>');
@@ -773,8 +883,14 @@ function renderRettificheStaff(d) {
       aggiornaRettificaStaff(rowEl.dataset.rettificaKey, el.dataset.rettificaField, el.value);
     });
   });
+  groups.querySelectorAll('[data-rettifica-reset]').forEach(btn => {
+    btn.addEventListener('click', () => resetRettifica(btn.dataset.rettificaReset));
+  });
   panel.classList.toggle('show', Object.keys(rettificheStaffState.rows).length > 0);
+  toggleRettifichePanel(rettificheUiAperte || elencoRettificheStaff().length > 0);
   aggiornaRiepilogoRettifiche();
+  const search = document.getElementById('rettifiche_search');
+  if (search) { search.value=''; filtraRettifiche(''); }
 }
 
 function applicaRettificheAlProtocollo(d) {
@@ -801,13 +917,54 @@ function validaRettificheStaff(protocollo) {
   return {ok:false, errore:`${senzaMotivo.length} ${senzaMotivo.length === 1 ? 'rettifica è priva' : 'rettifiche sono prive'} di motivazione.`};
 }
 
+function estraiRettificaSintetica(richiesto, accreditato) {
+  const req = String(richiesto || '').trim();
+  const acc = String(accreditato || '').trim();
+  const nonAccreditato = !acc;
+
+  const numPrima = s => s.match(/^([+-]?\d+(?:[.,]\d+)?)\s+(.+?)\s*$/);
+  const a = numPrima(req), b = numPrima(acc);
+  if (a && b && normalizeText(a[2]) === normalizeText(b[2])) {
+    return { label:a[2], da:a[1], a:b[1] };
+  }
+
+  const coppia = s => s.match(/^([^:]+):\s*([+-]?\d+(?:[.,]\d+)?|[A-Z]+)\s*$/i);
+  const c = coppia(req), d = coppia(acc);
+  if (c && d && normalizeText(c[1]) === normalizeText(d[1])) {
+    return { label:c[1].trim(), da:c[2], a:d[2] };
+  }
+
+  const nuovo = s => s.match(/^NUOVO(?:\s+POZIONE)?\s*:\s*(.+?)\s*\[(\d+)\](?:\s*:.*)?$/i);
+  const e = nuovo(req), f = nuovo(acc);
+  if (e && f && normalizeText(e[1]) === normalizeText(f[1])) {
+    return { label:e[1].trim(), da:`×${e[2]}`, a:`×${f[2]}` };
+  }
+
+  const movimento = s => s.match(/^(.+?):\s*([+-]\d+(?:[.,]\d+)?)\s*$/);
+  const g = movimento(req), h = movimento(acc);
+  if (g && h && normalizeText(g[1]) === normalizeText(h[1])) {
+    return { label:g[1].trim(), da:g[2], a:h[2] };
+  }
+
+  if (nonAccreditato) {
+    const soloReqNum = numPrima(req);
+    if (soloReqNum) return { label:soloReqNum[2], da:soloReqNum[1], a:'non accreditato' };
+    const soloReqCoppia = coppia(req);
+    if (soloReqCoppia) return { label:soloReqCoppia[1].trim(), da:soloReqCoppia[2], a:'non accreditato' };
+    const soloReqNuovo = nuovo(req);
+    if (soloReqNuovo) return { label:soloReqNuovo[1].trim(), da:`×${soloReqNuovo[2]}`, a:'non accreditato' };
+    return { label:req, da:'presente', a:'non accreditato' };
+  }
+  return { label:'Rettifica', da:req, a:acc };
+}
+
 function formattaRegistroRettifiche(rettifiche) {
   const arr = Array.isArray(rettifiche) ? rettifiche : [];
   if (!arr.length) return '';
-  const lines=['', '<b>Rettifiche Staff:</b>'];
+  const lines=['', '<b>Rettifiche:</b>'];
   arr.forEach(r => {
-    const eff = String(r.accreditato || '').trim() || '// non accreditato';
-    lines.push(`- <b>BOX ${r.box}</b> · richiesto: ${r.richiesto} ➔ accreditato: ${eff}`);
+    const sintesi = estraiRettificaSintetica(r.richiesto, r.accreditato);
+    lines.push(`- <b>${sintesi.label}:</b> ${sintesi.da} ➔ ${sintesi.a}`);
     lines.push(`  <i>Motivo:</i> ${r.motivo}`);
   });
   return lines.join('\n');
@@ -924,9 +1081,11 @@ function aggiornaStatoWorkspace() {
   let manca = '';
   if (listaOk) {
     const d = applicaRettificheAlProtocollo(parsed.data);
+    const checkRettifiche = validaRettificheStaff(d);
     const serveLink = d.tipoPg === 'studente' && d.boxE.length > 0;
     const serveCasa = d.tipoPg === 'studente' && d.boxA.some(r => /Punti\s+Casa/i.test(r));
-    if (serveLink && !String(document.getElementById('linkVoto')?.value || '').trim()) { extraOk = false; manca = 'Completa il link richiesta'; }
+    if (!checkRettifiche.ok) { extraOk = false; manca = 'Completa il motivo della rettifica'; }
+    else if (serveLink && !String(document.getElementById('linkVoto')?.value || '').trim()) { extraOk = false; manca = 'Completa il link richiesta'; }
     else if (serveCasa && !String(document.getElementById('inputPuntiCasaIniziali')?.value || '').trim()) { extraOk = false; manca = 'Inserisci i Punti Casa'; }
   }
 
@@ -965,6 +1124,23 @@ document.addEventListener('DOMContentLoaded', () => {
   if (schedaInput) schedaInput.addEventListener('input', aggiornaStatoWorkspace);
   if (linkVoto) linkVoto.addEventListener('input', aggiornaStatoWorkspace);
   if (puntiCasa) puntiCasa.addEventListener('input', aggiornaStatoWorkspace);
+
+  // Flusso rapido da tastiera: dopo un incolla valido passa al campo successivo.
+  if (listaInput) listaInput.addEventListener('paste', () => setTimeout(() => {
+    applicaProtocolloLista(false);
+    aggiornaStatoWorkspace();
+    const parsed = leggiProtocolloAccrediti(listaInput.value || '');
+    if (parsed && parsed.ok && schedaInput && !String(schedaInput.value || '').trim()) schedaInput.focus();
+  }, 0));
+  if (schedaInput) schedaInput.addEventListener('paste', () => setTimeout(() => {
+    aggiornaStatoWorkspace();
+    if (!validaSchedaValori(schedaInput.value || '').ok) return;
+    const link = document.getElementById('linkVoto');
+    const casa = document.getElementById('inputPuntiCasaIniziali');
+    if (link && link.offsetParent !== null && !String(link.value || '').trim()) link.focus();
+    else if (casa && casa.offsetParent !== null && !String(casa.value || '').trim()) casa.focus();
+    else document.getElementById('generate_btn')?.focus();
+  }, 0));
 
   document.querySelectorAll('[data-result-tab]').forEach(btn => {
     btn.addEventListener('click', () => attivaTabRisultato(btn.dataset.resultTab));
@@ -1331,7 +1507,7 @@ function leggiProtocolloAccrediti(raw) {
   // incide sull'elaborazione e possiamo usare il default interno Adulto.
   let tipoPg = null;
   if (boxes.E.length && boxes.F.length) {
-    return { ok: false, errore: 'La Lista contiene contemporaneamente BOX E (Studente) e BOX F (Adulto).' };
+    return { ok: false, errore: 'La Lista contiene contemporaneamente Voti da Studente e Sapienze da Adulto: verifica il tipo di PG.' };
   }
   if (boxes.E.length) tipoPg = 'studente';
   if (boxes.F.length) tipoPg = 'adulto';
@@ -2677,7 +2853,7 @@ function elaboraTerminale() {
     if (risultatoConoscenze.richieste) parti.push(`${risultatoConoscenze.richieste} conoscenze`);
     if ((protocollo.catalogoAcquisti || []).length) parti.push(`${protocollo.catalogoAcquisti.length} acquisti catalogo`);
     if ((protocollo.pozioniProdotte || []).length) parti.push(`${protocollo.pozioniProdotte.length} pozioni prodotte`);
-    if ((protocollo.rettificheStaff || []).length) parti.push(`${protocollo.rettificheStaff.length} rettifiche Staff`);
+    if ((protocollo.rettificheStaff || []).length) parti.push(`${protocollo.rettificheStaff.length} rettifiche`);
     if (risultatoCatalogo.applicate?.length) parti.push(`${risultatoCatalogo.applicate.length} modifiche oggetti`);
     if (risultatoBagaglio.trasferimenti?.length) {
       const nTrasfValidi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore).length;
