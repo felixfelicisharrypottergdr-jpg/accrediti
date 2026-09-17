@@ -423,6 +423,18 @@
         .execution-summary.show { display:block; }
         .action-primary:disabled { opacity:.48; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
 
+        /* Risultati: contrasto forzato anche nei browser che applicano stili propri ai textarea readonly */
+        #risultati_panel textarea.output-box {
+            background: linear-gradient(145deg, #2C2232, #201922) !important;
+            color: #F3E8D2 !important;
+            -webkit-text-fill-color: #F3E8D2 !important;
+            border: 1px solid rgba(216,192,138,.28) !important;
+            border-left: 4px solid #66866E !important;
+            opacity: 1 !important;
+            caret-color: #F3E8D2;
+        }
+        #risultati_panel textarea.output-box::selection { background: rgba(216,192,138,.30); color:#FFF9EA; }
+
         @media (max-width:820px) {
             body { padding:13px 10px 52px; }
             .container { gap:13px; }
@@ -613,6 +625,12 @@ function validaSchedaValori(raw) {
   return { ok:false, vuota:false, motivo:'Non sembra una Scheda Valori completa' + (mancanti.length ? ' · manca: ' + mancanti.join(', ') : '') };
 }
 
+function escapeHtmlUI(v) {
+  return String(v === undefined || v === null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function renderImportOverview(d) {
   const box = document.getElementById('import_overview');
   if (!box) return;
@@ -621,18 +639,49 @@ function renderImportOverview(d) {
   const meta = document.getElementById('import_overview_meta');
   const chips = document.getElementById('import_overview_chips');
   const detail = document.getElementById('import_overview_detail');
+  const conoscenze = normalizzaConoscenzeAccredito(d.conoscenzeAcquistate || []);
+  const numeroConoscenze = conoscenze.reduce((tot, gruppo) => tot + (gruppo.conoscenze || []).length, 0);
+
   if (title) title.textContent = (d.nomePg || 'PG') + ' · ' + (d.tipoPg === 'studente' ? 'Studente' : 'Adulto');
   if (meta) meta.textContent = Number(d.versione) === 2 ? 'FF-ACCREDITI-V2' : 'Formato BOX';
   if (chips) {
     const counts = [
       ['Variazioni', (d.boxA || []).length, 'fa-chart-line'],
       [d.tipoPg === 'studente' ? 'Voti' : 'Sapienze', d.tipoPg === 'studente' ? (d.boxE || []).length : (d.boxF || []).length, d.tipoPg === 'studente' ? 'fa-graduation-cap' : 'fa-book-open'],
+      ['Conoscenze', numeroConoscenze, 'fa-book-bookmark'],
       ['Bagaglio', (d.boxG || []).length, 'fa-suitcase'],
       ['Trasferimenti', (d.trasferimenti || []).length, 'fa-arrow-right-arrow-left']
     ];
     chips.innerHTML = counts.map(([label,n,icon]) => `<span class="overview-chip${n ? '' : ' muted'}"><i class="fa-solid ${icon}"></i>${label}: ${n}</span>`).join('');
   }
+
   if (detail) {
+    const righe = [];
+    const addRiga = (label, valori) => {
+      const puliti = (valori || []).map(v => String(v || '').trim()).filter(Boolean);
+      if (puliti.length) righe.push(`<b>${escapeHtmlUI(label)}:</b> ${puliti.map(escapeHtmlUI).join(' · ')}`);
+    };
+
+    addRiga('Variazioni riconosciute', d.boxA || []);
+    addRiga(d.tipoPg === 'studente' ? 'Voti riconosciuti' : 'Sapienze riconosciute', d.tipoPg === 'studente' ? (d.boxE || []) : (d.boxF || []));
+
+    const conRighe = [];
+    conoscenze.forEach(gruppo => {
+      const nomi = (gruppo.conoscenze || []).map(c => c.nome).filter(Boolean);
+      const prefisso = [gruppo.tipo, gruppo.categoria].filter(Boolean).join(' · ');
+      if (nomi.length) conRighe.push(`${prefisso}: ${nomi.join(', ')}`);
+    });
+    addRiga('Conoscenze riconosciute', conRighe);
+    addRiga('Bagaglio riconosciuto', d.boxG || []);
+
+    const trasfRighe = (d.trasferimenti || []).map(t => {
+      const nome = t.nome || t.name || 'Oggetto';
+      const q = t.quantita || t.qty || 1;
+      const dest = t.destinatarioNome || t.recipientName || 'destinatario';
+      return `${nome} ×${q} → ${dest}`;
+    });
+    addRiga('Trasferimenti riconosciuti', trasfRighe);
+
     const contatori = { USI:0, POST:0, ROLE:0 };
     (d.boxG || []).forEach(r => {
       const m = String(r).match(/^CONTATORE\s+(USI|UTILIZZI|POST|ROLE)\s*:/i);
@@ -640,14 +689,11 @@ function renderImportOverview(d) {
       const tipo = m[1].toUpperCase() === 'UTILIZZI' ? 'USI' : m[1].toUpperCase();
       if (Object.prototype.hasOwnProperty.call(contatori, tipo)) contatori[tipo]++;
     });
-    const parti = Object.entries(contatori).filter(([,n]) => n).map(([k,n]) => `${k}: ${n}`);
-    if (parti.length) {
-      detail.innerHTML = `<b>Contatori Bagaglio:</b> ${parti.join(' · ')}. Verranno aggiornati nella descrizione degli oggetti; se un contatore non viene trovato, il tool lo segnala senza ignorarlo in silenzio.`;
-      detail.classList.add('show');
-    } else {
-      detail.innerHTML = '';
-      detail.classList.remove('show');
-    }
+    const partiContatori = Object.entries(contatori).filter(([,n]) => n).map(([k,n]) => `${k}: ${n}`);
+    if (partiContatori.length) righe.push(`<b>Contatori Bagaglio:</b> ${partiContatori.map(escapeHtmlUI).join(' · ')}`);
+
+    detail.innerHTML = righe.join('<br>');
+    detail.classList.toggle('show', righe.length > 0);
   }
   box.classList.add('show');
 }
@@ -839,6 +885,189 @@ function normalizeText(s) {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+function sezioneConoscenzaDaTipoAccredito(tipo, sezioneEsplicita) {
+  const e = normalizeText(sezioneEsplicita || '');
+  if (e.includes('scolastic')) return 'scolastiche';
+  if (e.includes('extra')) return 'extra';
+  if (e.includes('avanzat')) return 'avanzate';
+
+  const t = normalizeText(tipo || '');
+  if (t.includes('scolastic')) return 'scolastiche';
+  if (t.includes('extra')) return 'extra';
+  if (t.includes('avanzat')) return 'avanzate';
+  if (t.includes('fatture') || t.includes('fatturant')) return 'scolastiche';
+  return '';
+}
+
+function estraiConoscenzeDaDetail(detailsHtml) {
+  return [...String(detailsHtml || '').matchAll(/\[URL=([^\]]+)\]([\s\S]*?)\[\/URL\]/gi)]
+    .map(m => ({ link: m[1].trim(), nome: m[2].replace(/<[^>]+>/g, '').trim() }))
+    .filter(c => c.nome && c.link);
+}
+
+function categoriaDaDetail(detailsHtml) {
+  const m = String(detailsHtml || '').match(/<summary\b[^>]*>([\s\S]*?)<\/summary>/i);
+  if (!m) return '';
+  return m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function normalizzaConoscenzeAccredito(items) {
+  return (Array.isArray(items) ? items : []).map(g => {
+    const detailsHtml = String(g?.detailsHtml || g?.detailHtml || '').trim();
+    const conoscenze = Array.isArray(g?.conoscenze) && g.conoscenze.length
+      ? g.conoscenze.map(c => ({ nome: String(c?.nome || '').trim(), link: String(c?.link || '').trim() })).filter(c => c.nome && c.link)
+      : estraiConoscenzeDaDetail(detailsHtml);
+    const categoria = String(g?.categoria || categoriaDaDetail(detailsHtml)).trim();
+    const tipo = String(g?.tipo || '').trim();
+    return {
+      tipo,
+      sezione: sezioneConoscenzaDaTipoAccredito(tipo, g?.sezione),
+      categoria,
+      detailsHtml,
+      conoscenze
+    };
+  }).filter(g => g.categoria && g.conoscenze.length);
+}
+
+function estraiConoscenzeDaLista(raw) {
+  const testo = String(raw || '').replace(/\r/g, '');
+  const mSezione = testo.match(/<b>\s*Acquista\s+Conoscenze\s*<\/b>\[\/font\]\[\/color\]\[\/size\]\s*\n([\s\S]*?)(?=\n\s*\[size=13\]|\n\s*\[size=10\]|$)/i);
+  if (!mSezione) return [];
+  const blocco = mSezione[1];
+  const out = [];
+  const rx = /Tipo\s+di\s+conoscenza:\s*([^\n(]+)(?:\s*\([^\n)]*\))?[\s\S]*?Categoria:\s*\n\s*(<details\b[\s\S]*?<\/details>)/gi;
+  let m;
+  while ((m = rx.exec(blocco)) !== null) {
+    const tipo = m[1].trim();
+    const detailsHtml = m[2].trim();
+    const conoscenze = estraiConoscenzeDaDetail(detailsHtml);
+    const categoria = categoriaDaDetail(detailsHtml);
+    if (!categoria || !conoscenze.length) continue;
+    out.push({ tipo, sezione: sezioneConoscenzaDaTipoAccredito(tipo, ''), categoria, detailsHtml, conoscenze });
+  }
+  return out;
+}
+
+function trovaBloccoConoscenzeScheda(html) {
+  const rxStart = /<div\b[^>]*data-label=["']Conoscenze["'][^>]*>/i;
+  const m = rxStart.exec(html);
+  if (!m) return null;
+  const start = m.index;
+  const dopoApertura = start + m[0].length;
+  const resto = html.slice(dopoApertura);
+  const next = /<div\b[^>]*data-label=["'][^"']+["'][^>]*>/i.exec(resto);
+  const end = next ? dopoApertura + next.index : html.length;
+  return { start, end, text: html.slice(start, end) };
+}
+
+function classificaTitoloSezioneConoscenze(htmlInterno) {
+  const plain = normalizeText(String(htmlInterno || '').replace(/<[^>]+>/g, ' '));
+  if (plain.includes('conoscenze scolastiche')) return 'scolastiche';
+  if (plain === 'extra' || plain.includes('conoscenze extra')) return 'extra';
+  if (plain === 'avanzate' || plain === 'avanzata' || plain.includes('conoscenze avanzate')) return 'avanzate';
+  return '';
+}
+
+function trovaSezioneConoscenzeNelBlocco(blocco, sezione) {
+  const rx = /<b\b[^>]*>([\s\S]*?)<\/b>\s*<br\s*\/?\s*>/gi;
+  const titoli = [];
+  let m;
+  while ((m = rx.exec(blocco)) !== null) {
+    const key = classificaTitoloSezioneConoscenze(m[1]);
+    if (key) titoli.push({ key, start: m.index, contentStart: rx.lastIndex });
+  }
+  const targetIndex = titoli.findIndex(t => t.key === sezione);
+  if (targetIndex < 0) return null;
+  const target = titoli[targetIndex];
+  const next = titoli[targetIndex + 1];
+  return { start: target.contentStart, end: next ? next.start : blocco.length };
+}
+
+function aggiungiConoscenzeADetail(detailHtml, conoscenze) {
+  const mancanti = (conoscenze || []).filter(c => {
+    const nomeNorm = normalizeText(c.nome);
+    const corpoNorm = normalizeText(String(detailHtml || '').replace(/\[\/?URL[^\]]*\]/gi, ' '));
+    return nomeNorm && !corpoNorm.includes(nomeNorm);
+  });
+  if (!mancanti.length) return { html: detailHtml, aggiunte: 0, giaPresenti: (conoscenze || []).length };
+
+  const close = /<\/details>\s*$/i.exec(detailHtml);
+  if (!close) return { html: detailHtml, aggiunte: 0, giaPresenti: 0, errore: 'detail della categoria non chiuso correttamente' };
+  const before = detailHtml.slice(0, close.index).replace(/\s*$/, '');
+  const after = detailHtml.slice(close.index);
+  const righe = mancanti.map(c => `[URL=${c.link}]${c.nome}[/URL]`);
+  return {
+    html: before + '\n' + righe.join('\n') + '\n' + after,
+    aggiunte: mancanti.length,
+    giaPresenti: (conoscenze || []).length - mancanti.length
+  };
+}
+
+function aggiornaConoscenzeScheda(html, gruppiRaw) {
+  const gruppi = normalizzaConoscenzeAccredito(gruppiRaw);
+  const risultato = { html, richieste: gruppi.reduce((n,g) => n + g.conoscenze.length, 0), aggiunte: 0, detailCreati: 0, giaPresenti: 0, avvisi: [] };
+  if (!gruppi.length) return risultato;
+
+  let out = html;
+  gruppi.forEach(gruppo => {
+    if (!gruppo.sezione) {
+      risultato.avvisi.push(`${gruppo.tipo || 'Tipologia non indicata'} · ${gruppo.categoria}: non è possibile determinare automaticamente la sezione Scolastiche/Extra/Avanzate.`);
+      return;
+    }
+    const kb = trovaBloccoConoscenzeScheda(out);
+    if (!kb) {
+      risultato.avvisi.push('Nella Scheda Valori non è stata trovata la sezione data-label="Conoscenze".');
+      return;
+    }
+    const sezione = trovaSezioneConoscenzeNelBlocco(kb.text, gruppo.sezione);
+    if (!sezione) {
+      risultato.avvisi.push(`${gruppo.categoria}: nella sezione Conoscenze non è stato trovato il blocco ${gruppo.sezione}.`);
+      return;
+    }
+
+    const testoSezione = kb.text.slice(sezione.start, sezione.end);
+    const rxDetails = /<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/gi;
+    let md, trovato = null;
+    const categoriaNorm = normalizeText(gruppo.categoria);
+    while ((md = rxDetails.exec(testoSezione)) !== null) {
+      const summaryNorm = normalizeText(md[1].replace(/<[^>]+>/g, ' '));
+      if (summaryNorm === categoriaNorm || summaryNorm.includes(categoriaNorm)) {
+        trovato = { index: md.index, full: md[0] };
+        break;
+      }
+    }
+
+    let nuovoBlocco = kb.text;
+    if (trovato) {
+      const agg = aggiungiConoscenzeADetail(trovato.full, gruppo.conoscenze);
+      if (agg.errore) {
+        risultato.avvisi.push(`${gruppo.categoria}: ${agg.errore}.`);
+        return;
+      }
+      const pos = sezione.start + trovato.index;
+      nuovoBlocco = kb.text.slice(0, pos) + agg.html + kb.text.slice(pos + trovato.full.length);
+      risultato.aggiunte += agg.aggiunte;
+      risultato.giaPresenti += agg.giaPresenti;
+    } else {
+      if (!gruppo.detailsHtml || !/<details\b/i.test(gruppo.detailsHtml)) {
+        risultato.avvisi.push(`${gruppo.categoria}: manca il detail originale da inserire nella Scheda.`);
+        return;
+      }
+      // La categoria non esiste ancora: il detail prodotto dalla Lista viene
+      // inserito senza modificarlo, subito dopo il titolo della sezione corretta.
+      const inserimento = '\n' + gruppo.detailsHtml.trim() + '\n';
+      nuovoBlocco = kb.text.slice(0, sezione.start) + inserimento + kb.text.slice(sezione.start);
+      risultato.aggiunte += gruppo.conoscenze.length;
+      risultato.detailCreati += 1;
+    }
+    out = out.slice(0, kb.start) + nuovoBlocco + out.slice(kb.end);
+  });
+
+  risultato.html = out;
+  return risultato;
+}
+
 function leggiProtocolloAccrediti(raw) {
   const testo = String(raw || '').replace(/\r/g, '');
 
@@ -851,6 +1080,8 @@ function leggiProtocolloAccrediti(raw) {
       if (data && Number(data.versione) === 2 && ['studente','adulto'].includes(data.tipoPg) &&
           Array.isArray(data.boxA) && Array.isArray(data.boxE) && Array.isArray(data.boxF) && Array.isArray(data.boxG)) {
         if (!Array.isArray(data.trasferimenti)) data.trasferimenti = [];
+        const dalPayload = normalizzaConoscenzeAccredito(data.conoscenzeAcquistate || []);
+        data.conoscenzeAcquistate = dalPayload.length ? dalPayload : estraiConoscenzeDaLista(testo);
         return { ok: true, data };
       }
     } catch (e) {}
@@ -933,6 +1164,7 @@ function leggiProtocolloAccrediti(raw) {
       boxF: boxes.F,
       boxG: boxes.G,
       trasferimenti,
+      conoscenzeAcquistate: estraiConoscenzeDaLista(testo),
       galeoniExtraBase: null
     }
   };
@@ -1944,6 +2176,9 @@ function elaboraTerminale() {
 
   const risultatoBagaglio = aggiornaBagaglio(html, modInventario, trasferimentiDaLista);
   html = risultatoBagaglio.html;
+
+  const risultatoConoscenze = aggiornaConoscenzeScheda(html, protocollo.conoscenzeAcquistate || []);
+  html = risultatoConoscenze.html;
   html = aggiornaPianoOSapienze(html);
 
   const registro = costruisciRegistro(dataScheda.iniziali, updatedValori.finali, deltas['Punti Casa'] || 0, puntiCasaIniziali, extraInfo);
@@ -1965,6 +2200,7 @@ function elaboraTerminale() {
       `${specifiche} ${protocollo.tipoPg === 'studente' ? 'voti' : 'sapienze'}`,
       `${(protocollo.boxG || []).length} movimenti Bagaglio`
     ];
+    if (risultatoConoscenze.richieste) parti.push(`${risultatoConoscenze.richieste} conoscenze`);
     if (risultatoBagaglio.trasferimenti?.length) parti.push(`${risultatoBagaglio.trasferimenti.length} trasferimenti`);
     execSummary.innerHTML = `<i class="fa-solid fa-circle-check"></i>&nbsp; ${protocollo.nomePg || 'PG'} elaborato · ${parti.join(' · ')}`;
     execSummary.classList.add('show');
@@ -1984,6 +2220,10 @@ function elaboraTerminale() {
         ' che non ' + (updatedValori.ignorati.length > 1 ? 'esistono' : 'esiste') +
         ' nella Scheda Valori e non sono state applicate: <b>' +
         updatedValori.ignorati.join(', ') + '</b>.');
+    }
+
+    if (risultatoConoscenze.avvisi && risultatoConoscenze.avvisi.length) {
+      avvisiStat.push('<b>⚠ Conoscenze:</b> ' + risultatoConoscenze.avvisi.map(escapeHtmlUI).join('<br>'));
     }
 
     if (extraInfo.errore) avvisiStat.push('<b>⚠ Galeoni Extra:</b> ' + extraInfo.errore);
