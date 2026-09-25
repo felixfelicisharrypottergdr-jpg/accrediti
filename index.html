@@ -458,6 +458,10 @@
     
 
         /* Rettifiche Staff · UX compatta */
+        .source-archive-tools { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:7px; margin-top:8px; }
+        .source-archive-tools span { font-size:11px; color:#746A78; }
+        .source-archive-tools button { min-height:32px; margin:0; width:auto; padding:6px 10px; white-space:nowrap; }
+        .source-archive-tools button:disabled { opacity:.48; cursor:not-allowed; }
         .rettifiche-panel { display:none; margin-top:14px; border:1px solid rgba(116,86,128,.20); background:#FBF8FC; border-radius:14px; overflow:hidden; }
         .rettifiche-panel.show { display:block; }
         .rettifiche-head { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 14px; background:linear-gradient(90deg,#F7F1F9,#FCFAFD); }
@@ -540,7 +544,11 @@
                     <div class="input-card-title"><i class="fa-solid fa-scroll"></i>Lista della Spesa</div>
                     <span class="mini-badge" id="lista_badge">In attesa</span>
                 </div>
-                <textarea id="inputComplessivoOriginale" placeholder="Incolla qui il post completo pubblicato dal PG (formato V3 o Lista precedente)..."></textarea>
+                <textarea id="inputComplessivoOriginale" placeholder="Incolla il codice completo del post del PG, incluso il blocco tecnico V3..."></textarea>
+                <div class="source-archive-tools">
+                  <span>Conserva la richiesta originale prima di eseguire le rettifiche.</span>
+                  <button type="button" id="btn_copia_originale" class="btn-copia" onclick="copiaRichiestaOriginale()" disabled><i class="fa-regular fa-copy"></i>&nbsp; Copia richiesta per il Registro</button>
+                </div>
                 <div id="import_status" class="import-inline" style="display:none;"></div>
             </section>
 
@@ -1059,6 +1067,8 @@ function aggiornaStatoWorkspace() {
   const listaOk = !!(parsed && parsed.ok);
   const schedaCheck = validaSchedaValori(schedaRaw);
   const schedaOk = schedaCheck.ok;
+  const btnArchivio=document.getElementById('btn_copia_originale');
+  if(btnArchivio) btnArchivio.disabled=!listaOk;
 
   if (!listaRaw.trim()) setStatoElemento('lista_state_chip','lista_input_card','lista_badge','', 'In attesa');
   else if (listaOk) {
@@ -1156,6 +1166,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   aggiornaStatoWorkspace();
 });
+
+async function copiaRichiestaOriginale() {
+  const input=document.getElementById('inputComplessivoOriginale');
+  const btn=document.getElementById('btn_copia_originale');
+  const testo=input?.value || '';
+  if(!btn || !leggiProtocolloAccrediti(testo).ok) return;
+  const before=btn.innerHTML;
+  try {
+    if(!navigator.clipboard?.writeText) throw new Error('Clipboard API non disponibile');
+    await navigator.clipboard.writeText(testo);
+    btn.innerHTML='<i class="fa-solid fa-check"></i>&nbsp; Richiesta copiata';
+  } catch (_) {
+    input.focus();input.select();
+    if(document.execCommand('copy')) btn.innerHTML='<i class="fa-solid fa-check"></i>&nbsp; Richiesta copiata';
+    else btn.innerHTML='Seleziona e copia il testo con Ctrl+C';
+  }
+  setTimeout(()=>{btn.innerHTML=before;},1800);
+}
 
 function formatNumeroItaliano(num) {
   const n = Number(num);
@@ -1475,7 +1503,7 @@ function leggiProtocolloAccrediti(raw) {
   // <details> ... Dati per l'Accredito ... BOX A / E / F / G ... </details>
   // Non richiede marcatori tecnici aggiuntivi.
   const details = testo.match(/<details>\s*<summary>[\s\S]*?Dati(?:\s+tecnici)?\s+per\s+l['’]Accredito[\s\S]*?<\/summary>\s*([\s\S]*?)<\/details>/i);
-  if (!details) return { ok: false, errore: 'Blocco tecnico per l’Accredito non trovato nel post del PG.' };
+  if (!details) return { ok: false, errore: 'Dati tecnici non trovati: copia il codice completo del post da Modifica, non solo il testo visibile sul forum.' };
 
   const corpo = details[1].trim();
   const boxes = { A: [], E: [], F: [], G: [] };
