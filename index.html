@@ -2394,8 +2394,23 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
       const tailInArrivo = pulisciTailOggettoPerTrasferimento(op.desc || '');
       const matches=matchesNome(target,key);
       const stessoStato=matches.find(o=>normalizeText(pulisciTailOggettoPerTrasferimento(o.tail||''))===normalizeText(tailInArrivo));
-      if (stessoStato) stessoStato.qty=(stessoStato.qty||0)+op.qty;
-      else target.objects.push({ name: op.name, qty: op.qty, tail: op.desc ? ` ${op.desc}` : '', bold: true });
+      if (stessoStato) {
+        stessoStato.qty=(stessoStato.qty||0)+op.qty;
+      } else {
+        const nuovoOggetto = { name: op.name, qty: op.qty, tail: op.desc ? ` ${op.desc}` : '', bold: true };
+
+        // Inserisce soltanto la nuova voce nella posizione alfabetica corretta,
+        // senza riordinare le righe già presenti nella Scheda. In questo modo
+        // eventuali ordinamenti/manualità esistenti restano intatti.
+        const indiceInserimento = target.objects.findIndex(o =>
+          String(o.name || '').localeCompare(String(nuovoOggetto.name || ''), 'it', {
+            sensitivity: 'base',
+            numeric: true
+          }) > 0
+        );
+        if (indiceInserimento === -1) target.objects.push(nuovoOggetto);
+        else target.objects.splice(indiceInserimento, 0, nuovoOggetto);
+      }
       return;
     }
 
