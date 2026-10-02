@@ -546,7 +546,7 @@
                 </div>
                 <textarea id="inputComplessivoOriginale" placeholder="Incolla il codice completo del post del PG, incluso il blocco tecnico V3..."></textarea>
                 <div class="source-archive-tools">
-                  <span>Conserva la richiesta originale prima di eseguire le rettifiche.</span>
+                  <span>Copia una versione pronta per il Registro: dettagli in spoiler e dati tecnici esclusi.</span>
                   <button type="button" id="btn_copia_originale" class="btn-copia" onclick="copiaRichiestaOriginale()" disabled><i class="fa-regular fa-copy"></i>&nbsp; Copia richiesta per il Registro</button>
                 </div>
                 <div id="import_status" class="import-inline" style="display:none;"></div>
@@ -1167,21 +1167,91 @@ document.addEventListener('DOMContentLoaded', () => {
   aggiornaStatoWorkspace();
 });
 
+function preparaRichiestaPerRegistro(raw) {
+  let testo = String(raw || '').replace(/\r/g, '').trim();
+  if (!testo) return '';
+
+  // 1) Il Registro non deve conservare il payload tecnico usato dal Generatore Accrediti.
+  // Il formato corrente lo racchiude nel <details> "Dati tecnici per l'Accredito".
+  testo = testo.replace(
+    /\n*<details>\s*<summary>[\s\S]*?Dati(?:\s+tecnici)?\s+per\s+l['’]Accredito[\s\S]*?<\/summary>[\s\S]*?<\/details>\s*/gi,
+    '\n'
+  );
+
+  // Compatibilità di sicurezza: se un vecchio post contenesse il protocollo V2/V3
+  // fuori dal <details>, eliminiamo comunque il blocco tecnico dalla copia per il Registro.
+  testo = testo.replace(/\n*\[FF-ACCREDITI-V(3|2)\][\s\S]*?\[\/FF-ACCREDITI-V\1\]\s*/gi, '\n');
+  testo = testo.replace(/\n{3,}/g, '\n\n').trim();
+
+  // 2) L'intestazione col nome del PG resta visibile.
+  // Tutto ciò che segue fino al riepilogo finale viene richiuso in spoiler.
+  const rxIntestazione = /^(\s*\[size=[^\]]+\][^\n]*<b>\s*(?:Richiesta di|Lista della Spesa di)\s+[^<\n]+<\/b>[^\n]*\[\/size\]\s*)/im;
+  const mIntestazione = rxIntestazione.exec(testo);
+
+  // Il formato attuale della Lista usa "TOTALE RICHIESTO"; manteniamo anche
+  // alcune diciture precedenti/alternative per non rompere richieste già pubblicate.
+  const rxTotale = /(?:\[size=[^\]]+\][^\n]*<b>\s*(?:TOTALE RICHIESTO|COMPLESSIVO ACCREDITO|ACCREDITO COMPLESSIVO)\s*<\/b>[^\n]*\[\/size\]|<b>\s*(?:TOTALE RICHIESTO|COMPLESSIVO ACCREDITO|ACCREDITO COMPLESSIVO)\s*<\/b>)/i;
+  const mTotale = rxTotale.exec(testo);
+
+  if (!mIntestazione || !mTotale) {
+    // Meglio una copia pulita ma non ristrutturata che rischiare di nascondere
+    // parti sbagliate di una Lista molto vecchia o modificata manualmente.
+    return testo;
+  }
+
+  const fineIntestazione = mIntestazione.index + mIntestazione[0].length;
+  if (mTotale.index <= fineIntestazione) return testo;
+
+  const prima = testo.slice(0, fineIntestazione).trimEnd();
+  const corpo = testo.slice(fineIntestazione, mTotale.index).trim();
+  const totale = testo.slice(mTotale.index).trimStart();
+
+  if (!corpo) return `${prima}\n\n${totale}`.trim();
+
+  return `${prima}\n\n[spoiler]\n${corpo}\n[/spoiler]\n\n${totale}`.trim();
+}
+
+function copiaTestoFallback(testo) {
+  const y = window.scrollY;
+  const tmp = document.createElement('textarea');
+  tmp.value = testo;
+  tmp.setAttribute('readonly', 'readonly');
+  tmp.style.position = 'fixed';
+  tmp.style.left = '-9999px';
+  tmp.style.top = '0';
+  tmp.style.opacity = '0';
+  document.body.appendChild(tmp);
+  tmp.focus({ preventScroll: true });
+  tmp.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+  tmp.remove();
+  window.scrollTo(0, y);
+  return ok;
+}
+
 async function copiaRichiestaOriginale() {
   const input=document.getElementById('inputComplessivoOriginale');
   const btn=document.getElementById('btn_copia_originale');
   const testo=input?.value || '';
   if(!btn || !leggiProtocolloAccrediti(testo).ok) return;
+
+  const testoRegistro = preparaRichiestaPerRegistro(testo);
+  if (!testoRegistro) return;
+
   const before=btn.innerHTML;
+  let copiato = false;
   try {
     if(!navigator.clipboard?.writeText) throw new Error('Clipboard API non disponibile');
-    await navigator.clipboard.writeText(testo);
-    btn.innerHTML='<i class="fa-solid fa-check"></i>&nbsp; Richiesta copiata';
+    await navigator.clipboard.writeText(testoRegistro);
+    copiato = true;
   } catch (_) {
-    input.focus();input.select();
-    if(document.execCommand('copy')) btn.innerHTML='<i class="fa-solid fa-check"></i>&nbsp; Richiesta copiata';
-    else btn.innerHTML='Seleziona e copia il testo con Ctrl+C';
+    copiato = copiaTestoFallback(testoRegistro);
   }
+
+  btn.innerHTML = copiato
+    ? '<i class="fa-solid fa-check"></i>&nbsp; Pronta per il Registro'
+    : '<i class="fa-solid fa-triangle-exclamation"></i>&nbsp; Copia non riuscita';
   setTimeout(()=>{btn.innerHTML=before;},1800);
 }
 
