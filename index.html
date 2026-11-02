@@ -1029,6 +1029,12 @@ function renderImportOverview(d) {
       return `${a.venditore || 'Catalogo'}: ${a.nome || 'voce'} ×${a.quantita || 1}${dest}${prezzo}`;
     });
     addRiga('Acquisti catalogo riconosciuti', catalogoRighe);
+    if(d.commercioDebito && Number(d.commercioDebito.baseAcquisti)>0) {
+      const cd=d.commercioDebito;
+      addRiga('Debito acquisti — importo già incluso nel BOX A', [
+        `${formatNumeroItaliano(Number(cd.baseAcquisti))} G di listino ×${formatNumeroItaliano(Number(cd.coefficiente))} = ${formatNumeroItaliano(Number(cd.totaleAcquisti))} G da scalare (maggiorazione ${formatNumeroItaliano(Number(cd.maggiorazione))} G)`
+      ]);
+    }
     addRiga('Bagaglio riconosciuto', d.boxG || []);
     const opRighe = (d.operazioniCatalogo || []).map(o => `${o.tipo || 'Operazione'}${o.targetName ? ` → ${o.targetName}` : ''}`);
     addRiga('Operazioni su oggetti riconosciute', opRighe);
@@ -1257,8 +1263,10 @@ async function copiaRichiestaOriginale() {
 
 function formatNumeroItaliano(num) {
   const n = Number(num);
-  if (Number.isInteger(n)) return String(n);
-  return String(n).replace('.', ',');
+  if (!Number.isFinite(n)) return String(num);
+  // Evita artefatti IEEE-754 (es. -3,200000000000003) nei saldi e nel Registro.
+  const pulito = Math.round((n + Number.EPSILON) * 1e8) / 1e8;
+  return String(Object.is(pulito, -0) ? 0 : pulito).replace('.', ',');
 }
 function toNumber(val) {
   if (val === undefined || val === null) return 0;
@@ -1668,6 +1676,42 @@ function validaSincronizzazioneCommercio(data) {
     else disponibili.set(canon,n-1);
   });
   return {ok:errori.length===0, verificati:acquisti.length, legacy:false, errori};
+}
+
+function verificaDebitoCommercio(data) {
+  // Il valore del Box A include gia' il coefficiente: Accrediti NON lo riapplica.
+  // Questa verifica serve solo a intercettare discrepanze tra listino e payload.
+  const c = data?.commercioDebito;
+  if (!c) return {ok:true,legacy:true,errori:[]};
+  const errori=[];
+  const numero=x=>Number(x);
+  const vicino=(x,y)=>Number.isFinite(numero(x)) && Math.abs(numero(x)-y)<0.011;
+  const round=x=>Math.round((Number(x)+Number.EPSILON)*100)/100;
+  const coeff=numero(c.coefficiente);
+  if (Number(c.versione)!==1 || ![1,1.2,1.3,1.4,1.5,1.6,1.7].some(v=>Math.abs(v-coeff)<0.00001))
+    errori.push('Coefficiente di Debito nel protocollo non valido.');
+  const gruppi=Array.isArray(c.negozi)?c.negozi:[];
+  const baseGruppi=round(gruppi.reduce((tot,g)=>tot+(numero(g.base)||0),0));
+  const effGruppi=round(gruppi.reduce((tot,g)=>tot+(numero(g.effettivo)||0),0));
+  for (const [i,g] of gruppi.entries()) {
+    if (!Number.isFinite(numero(g.base)) || numero(g.base)<0 || !vicino(g.effettivo,round(numero(g.base)*coeff)))
+      errori.push(`Negozio ${i+1}: totale maggiorato incoerente.`);
+  }
+  if(!vicino(c.baseAcquisti,baseGruppi) || !vicino(c.totaleAcquisti,effGruppi) ||
+     !vicino(c.maggiorazione,round(effGruppi-baseGruppi)))
+    errori.push('Il riepilogo del Coefficiente di Debito non coincide con i subtotali degli acquisti.');
+  // Verify that the listino is still the price stored per product (avoid double debit).
+  const catalogo=(data.catalogoAcquisti||[]).reduce((tot,a)=>tot+(numero(a.prezzo)||0),0);
+  const negozi=(data.ripristinoCommercio?.negozi||[]);
+  let manuali=0;
+  for (const g of negozi) if(g.mode==='manuale') for(const r of (g.righe||[])) {
+    if(!(String(r.nome||'').trim()) || !(numero(r.qty)>0))continue;
+    const prezzo=numero(r.prezzo)||0;
+    manuali += r.prezzoTipo==='unitario' ? prezzo*(numero(r.qty)||0) : prezzo;
+  }
+  if (negozi.length && !vicino(c.baseAcquisti,round(catalogo+manuali)))
+    errori.push('Il subtotale di listino non coincide con gli acquisti presenti nel catalogo/manuali.');
+  return {ok:errori.length===0,legacy:false,errori};
 }
 
 function applicaProtocolloLista(mostraErrore) {
@@ -3257,6 +3301,11 @@ function verificaPremiProtocollo(originale,raw,rettificato) {
 function elaboraTerminale() {
   const protocollo = applicaProtocolloLista(true);
   if (!protocollo) return;
+  const checkDebito = verificaDebitoCommercio(protocollo);
+  if (!checkDebito.ok) {
+    alert('Coefficiente di Debito: dati non coerenti. Nessun accredito è stato eseguito.\n\n'+checkDebito.errori.join('\n'));
+    return;
+  }
   const syncCommercio = validaSincronizzazioneCommercio(protocollo);
   if (!syncCommercio.ok) {
     alert('Commercio Magico: i dati strutturati del catalogo e le righe inventario non coincidono. Nessun accredito è stato eseguito.\n\n' + syncCommercio.errori.join('\n'));
