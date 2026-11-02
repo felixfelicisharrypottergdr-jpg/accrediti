@@ -2354,9 +2354,19 @@ function estraiSezioneBagaglio(html, icona) {
   return { rx, start: m[1], body: m[2], end: m[3] };
 }
 
-function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
+function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni, operazioniCatalogo = []) {
   const parsed = parseInventarioMods(modInventarioRaw);
   const ops = parsed.ops;
+  // Retrocompatibilità: V3 vecchia Lista della Spesa segnava Penne Magiche
+  // come CONTATORE USI +1. Ogni penna ha 1 uso: va invece tolto 1 pezzo.
+  const usoPenne = (Array.isArray(operazioniCatalogo) ? operazioniCatalogo : [])
+    .filter(o => String(o?.tipo || '').toUpperCase() === 'USA_OGGETTO' && o.productId === 'OBJ-206');
+  const canon = nome => {const n = normalizeText(nome || ''); return n === 'penna magica' ? 'penne magiche' : n;};
+  ops.forEach(op => {
+    if (op.type !== 'uses' || op.delta <= 0 || !['USI','AUTO'].includes(op.counterType)) return;
+    const info = usoPenne.find(u => canon(u.sourceName) === canon(op.name) && Number(u.quantita) === op.delta);
+    if (info) {op.type = 'qty'; op.delta = -op.delta;}
+  });
   const nonRiconosciute = parsed.nonRiconosciute;
   const trasferimenti = dedupTrasferimenti([...(parsed.trasferimenti || []), ...(trasferimentiEsterni || [])]);
   if (!ops.length) return { html, nonRiconosciute, trasferimenti };
@@ -2373,7 +2383,22 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
     sezioni[cat.tag] = { ...sez, objects, cat };
   });
 
-  const matchesNome = (sez, key) => (sez?.objects || []).filter(o => normalizeText(o.name) === key && (o.qty || 0) > 0);
+  // Penne Magiche: un solo prodotto consumabile con 1 uso per esemplare.
+  // Le schede storiche possono riportare solo "(0/1 usi)", mentre gli acquisti
+  // recenti aggiungono anche la descrizione del catalogo dopo " | ".
+  // Non sono varianti diverse: consolidarle evita due righe omonime e lo
+  // stato ambiguo che impedirebbe i successivi utilizzi/accrediti.
+  const pennaNonUsata = o => canon(o.name) === 'penne magiche' &&
+    /^\s*\(?0\s*\/\s*1\s*usi?\)?(?:\s*\||\s*$)/i.test(String(o.tail || '').trim());
+  Object.values(sezioni).forEach(sez => {
+    const uguali = sez.objects.filter(pennaNonUsata);
+    if (uguali.length < 2) return;
+    const prima = uguali[0];
+    prima.qty = uguali.reduce((q,o) => q + (o.qty || 0), 0);
+    uguali.slice(1).forEach(o => sez.objects.splice(sez.objects.indexOf(o), 1));
+  });
+
+  const matchesNome = (sez, key) => (sez?.objects || []).filter(o => canon(o.name) === canon(key) && (o.qty || 0) > 0);
   const trovaTarget = (key, categoriaPreferita) => {
     if (categoriaPreferita && sezioni[categoriaPreferita]) {
       const target=sezioni[categoriaPreferita], matches=matchesNome(target,key);
@@ -2393,7 +2418,10 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
       const key = normalizeText(op.name);
       const tailInArrivo = pulisciTailOggettoPerTrasferimento(op.desc || '');
       const matches=matchesNome(target,key);
-      const stessoStato=matches.find(o=>normalizeText(pulisciTailOggettoPerTrasferimento(o.tail||''))===normalizeText(tailInArrivo));
+      const stessoStato=matches.find(o=>
+        normalizeText(pulisciTailOggettoPerTrasferimento(o.tail||''))===normalizeText(tailInArrivo) ||
+        (canon(op.name) === 'penne magiche' && pennaNonUsata(o) && pennaNonUsata({name:op.name,tail:tailInArrivo}))
+      );
       if (stessoStato) {
         stessoStato.qty=(stessoStato.qty||0)+op.qty;
       } else {
@@ -2462,8 +2490,10 @@ function aggiornaBagaglio(html, modInventarioRaw, trasferimentiEsterni) {
     }
     if (op.type === 'uses') {
       const aggiornato = updateCounterInTail(obj.tail || '', op.delta, op.counterType || 'AUTO');
-      if (aggiornato.found) obj.tail = aggiornato.tail;
-      else {
+      if (aggiornato.found && aggiornato.next === aggiornato.current + op.delta) obj.tail = aggiornato.tail;
+      else if (aggiornato.found) {
+        nonRiconosciute.push(`${op.name}: contatore ${aggiornato.current}/${aggiornato.max} non sufficiente per variazione ${op.delta > 0 ? '+' : ''}${op.delta}; nessun uso applicato`);
+      } else {
         const etichetta = (op.counterType && op.counterType !== 'AUTO') ? ` ${op.counterType}` : '';
         nonRiconosciute.push(`${op.name}: contatore${etichetta} non trovato nella descrizione dell'oggetto`);
       }
@@ -2872,6 +2902,20 @@ function applicaOperazioniCatalogo(html, operazioni) {
   (Array.isArray(operazioni)?operazioni:[]).forEach(op => {
     const tipo=String(op?.tipo || '').toUpperCase();
     if (!tipo) return;
+    if (tipo === 'USA_OGGETTO') {
+      // Lo scarico è GIA' gestito dal Box G, passato ad aggiornaBagaglio.
+      // Non ripetere lo scarico qui: conterebbe due volte l'oggetto.
+      const n = String(op.sourceName || '').trim();
+      const q = Math.max(1, parseInt(op.quantita, 10) || 1);
+      if (op.productId === 'OBJ-206') {
+        applicate.push(`Penne Magiche ×${q}: utilizzo riconosciuto, scarico dal Bagaglio gestito dal Box G`);
+        avvisi.push(`Penne Magiche ×${q}: verificare la Role di studio e il voto extra dello Studente (per Adulti: +3 PP ogni 5 post della stessa Role). Nessun premio assegnato automaticamente dall'operazione.`);
+      } else {
+        applicate.push(`USA_OGGETTO: ${n} ×${q} · scarico gestito dal Box G`);
+        if (op.notaEffetto && !op.bonusPpAutomatico) avvisi.push(`${n}: ${op.notaEffetto}`);
+      }
+      return;
+    }
     if (tipo === 'APPLICA_OGGETTO') {
       const res=applicaOggettoPosseduto(out,op);
       if(res.ok){out=res.html;applicate.push(`APPLICA_OGGETTO: ${res.dettaglio}`);} else avvisi.push(res.errore || `APPLICA_OGGETTO: operazione non applicata.`);
@@ -2981,7 +3025,7 @@ function elaboraTerminale() {
   const extraInfo = aggiornaGaleoniExtra(html, riconciliati.extraGaleoni, riconciliati.originale.baseExtraRiferita);
   html = extraInfo.html;
 
-  const risultatoBagaglio = aggiornaBagaglio(html, modInventario, trasferimentiDaLista);
+  const risultatoBagaglio = aggiornaBagaglio(html, modInventario, trasferimentiDaLista, protocollo.operazioniCatalogo || []);
   html = risultatoBagaglio.html;
 
   const risultatoCatalogo = applicaOperazioniCatalogo(html, protocollo.operazioniCatalogo || []);
