@@ -1714,6 +1714,38 @@ function verificaDebitoCommercio(data) {
   return {ok:errori.length===0,legacy:false,errori};
 }
 
+// Controllo integrità dei premi Livello V, indipendente dai totali del Box A.
+// La prova storica resta sottoposta a verifica dello Staff.
+function verificaPrestigioLivelloV(data){
+  const p=data?.prestigioLivelloV;
+  if(p==null)return {ok:true,legacy:true,errori:[],avvisi:[]};
+  const errori=[],avvisi=[];
+  if(data.tipoPg!=='adulto'||Number(p.versione)!==1)errori.push('Premio Prestigio Livello V: protocollo/tipo PG non valido.');
+  const gia=Number(p.giaAccreditati),nuovi=Array.isArray(p.nuovi)?p.nuovi:[],precedenti=Array.isArray(p.precedenti)?p.precedenti:[];
+  if(!Number.isInteger(gia)||gia<0||gia>5||gia+nuovi.length+precedenti.length>5)errori.push('Premio Prestigio Livello V: oltre il limite di 5 bonus già richiesti/ottenuti.');
+  if(!nuovi.length&&!precedenti.length)errori.push('Premio Prestigio Livello V: nessuna Conoscenza indicata.');
+  if(Number(p.totale)!==2*(nuovi.length+precedenti.length))errori.push('Premio Prestigio Livello V: importo del premio incoerente.');
+  const keys=new Set();
+  [...nuovi,...precedenti].forEach(item=>{
+    const sap=String(item?.sapienza||'').trim(),con=String(item?.conoscenza||'').trim();
+    if(!sap||!con)errori.push('Premio Prestigio Livello V: Sapienza/Conoscenza mancante.');
+    const key=(sap+'|'+con).toLowerCase();
+    if(keys.has(key))errori.push('Premio Prestigio Livello V: doppia richiesta per la stessa Conoscenza.');
+    keys.add(key);
+  });
+  const boxF=Array.isArray(data.boxF)?data.boxF:[];
+  for(const n of nuovi){
+    const found=boxF.some(r=>String(r).trim()===(String(n.conoscenza).trim()+': 5'));
+    if(!found)errori.push(`Prestigio Livello V: ${n.conoscenza||'?'} non risulta acquistata al Livello V nel Box F.`);
+  }
+  for(const n of precedenti){
+    if(!String(n.prova||'').trim())errori.push(`Prestigio Livello V: manca prova per ${n.conoscenza||'?'}.`);
+  }
+  if(precedenti.length)avvisi.push(`Verificare manualmente ${precedenti.length} Conoscenze già al Livello V e non premiate, consultando le prove indicate.`);
+  avvisi.push('Verificare sulla Scheda PG che nessuna Conoscenza sia già stata premiata e che il totale in carriera non superi +10 Prestigio.');
+  return {ok:errori.length===0,legacy:false,errori,avvisi};
+}
+
 function applicaProtocolloLista(mostraErrore) {
   const raw = document.getElementById('inputComplessivoOriginale').value || '';
   const parsed = leggiProtocolloAccrediti(raw);
@@ -1760,6 +1792,13 @@ function applicaProtocolloLista(mostraErrore) {
     status.style.color = '#234132';
     const formato = Number(d.versione) === 2 ? 'V2' : 'Formato attuale';
     status.innerHTML = `<b>${d.nomePg || 'PG'} · ${d.tipoPg === 'studente' ? 'Studente' : 'Adulto'}</b> <span class="format-tag">${formato}</span>`;
+    const controlloV=verificaPrestigioLivelloV(d);
+    if(!controlloV.ok){
+      status.style.background='var(--red-soft)';status.style.borderLeftColor='var(--red)';status.style.color='#6B2727';
+      status.innerHTML+='<div style="margin-top:7px;white-space:pre-line"><b>Prestigio Livello V incoerente:</b> '+escapeHtmlUI(controlloV.errori.join('\n'))+'</div>';
+    } else if(!controlloV.legacy) {
+      status.innerHTML+='<div style="margin-top:7px;font-size:11px">Bonus Prestigio Livello V: '+(d.prestigioLivelloV.nuovi||[]).length+' nuove e '+(d.prestigioLivelloV.precedenti||[]).length+' pregresse; verifica Staff richiesta.</div>';
+    }
     const revisione=verificaPremiProtocollo(dOriginale,raw,d);
     if(!revisione.ok) {
       status.style.background='var(--red-soft)'; status.style.borderLeftColor='var(--red)'; status.style.color='#6B2727';
@@ -3301,6 +3340,14 @@ function verificaPremiProtocollo(originale,raw,rettificato) {
 function elaboraTerminale() {
   const protocollo = applicaProtocolloLista(true);
   if (!protocollo) return;
+  const checkPrestigioV = verificaPrestigioLivelloV(protocollo);
+  if(!checkPrestigioV.ok){
+    alert('Prestigio Conoscenze Livello V: accredito bloccato.\n\n'+checkPrestigioV.errori.join('\n'));
+    return;
+  }
+  if(!checkPrestigioV.legacy && (protocollo.prestigioLivelloV.precedenti||[]).length){
+    if(!confirm('ATTENZIONE: richiesta di Prestigio per Conoscenze già al Livello V in passato. Hai verificato nella Scheda e negli accrediti precedenti che NON siano già state premiate, e che il limite complessivo di +10 Prestigio sia rispettato?')) return;
+  }
   const checkDebito = verificaDebitoCommercio(protocollo);
   if (!checkDebito.ok) {
     alert('Coefficiente di Debito: dati non coerenti. Nessun accredito è stato eseguito.\n\n'+checkDebito.errori.join('\n'));
@@ -3382,11 +3429,17 @@ function elaboraTerminale() {
   const registro = costruisciRegistro(dataScheda.iniziali, updatedValori.finali, deltas['Punti Casa'] || 0, puntiCasaIniziali, extraInfo, protocollo.rettificheStaff || []);
 
   const notaPlayer = typeof protocollo.noteStaff === 'string' ? protocollo.noteStaff.trim().slice(0,2500) : '';
+  const notaPremioVRegistro=!checkPrestigioV.legacy
+    ? '\n\n<b>PRESTIGIO CONOSCENZE AL LIVELLO V — DA VERIFICARE:</b>\n'+
+      (protocollo.prestigioLivelloV.nuovi||[]).map(n=>'- '+n.sapienza+': '+n.conoscenza+' (nuova)').concat(
+      (protocollo.prestigioLivelloV.precedenti||[]).map(n=>'- '+n.sapienza+': '+n.conoscenza+' (pregressa, prova: '+n.prova+')')).join('\n')+
+      '\nGià premiate dichiarate: '+protocollo.prestigioLivelloV.giaAccreditati+'/5 · richiesti +'+protocollo.prestigioLivelloV.totale+' Prestigio'
+    : '';
   const notaRegistro = notaPlayer
     ? '\n\n<b>NOTE DEL PLAYER — VERIFICA MANUALE (non applicate automaticamente):</b>\n' +
       notaPlayer.replace(/</g,'&lt;').replace(/>/g,'&gt;')
     : '';
-  document.getElementById('outForum').value = registro + notaRegistro;
+  document.getElementById('outForum').value = registro + notaPremioVRegistro + notaRegistro;
   document.getElementById('outScheda').value = html;
 
   const risultatiPanel = document.getElementById('risultati_panel');
@@ -3409,6 +3462,7 @@ function elaboraTerminale() {
     if ((protocollo.pozioniProdotte || []).length) parti.push(`${protocollo.pozioniProdotte.length} pozioni prodotte`);
     if ((protocollo.rettificheStaff || []).length) parti.push(`${protocollo.rettificheStaff.length} rettifiche`);
     if (notaPlayer) parti.push('1 nota Staff da verificare');
+    if(!checkPrestigioV.legacy)parti.push('bonus Livello V · +'+protocollo.prestigioLivelloV.totale+' Prestigio');
     if (risultatoCatalogo.applicate?.length) parti.push(`${risultatoCatalogo.applicate.length} modifiche oggetti`);
     if (risultatoBagaglio.trasferimenti?.length) {
       const nTrasfValidi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore).length;
@@ -3422,6 +3476,9 @@ function elaboraTerminale() {
   if (warnBox) {
     const avvisiStat = [];
 
+    if(!checkPrestigioV.legacy){
+      avvisiStat.push('<b>🎖 Prestigio Livello V:</b> '+checkPrestigioV.avvisi.map(escapeHtmlUI).join('<br>'));
+    }
     if (notaPlayer) {
       avvisiStat.push('<b>📝 Nota aggiuntiva del player — intervento manuale:</b><br>' +
         escapeHtmlUI(notaPlayer).replace(/\n/g,'<br>') +
