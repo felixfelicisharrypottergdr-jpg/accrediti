@@ -1173,16 +1173,49 @@ document.addEventListener('DOMContentLoaded', () => {
   aggiornaStatoWorkspace();
 });
 
+// Individua il blocco tecnico in base alla propria intestazione, non cercando
+// genericamente da un <details> qualsiasi. Le Conoscenze acquistate contengono
+// altri <details>: una regex "ampia" eliminava la richiesta fino al totale.
+function individuaBlocchiTecniciAccredito(testo) {
+  const contenuto = String(testo || '');
+  const stack = [];
+  const risultati = [];
+  const rx = /<\/?details\b[^>]*>/gi;
+  let m;
+  while ((m = rx.exec(contenuto)) !== null) {
+    if (!/^<\/details/i.test(m[0])) {
+      stack.push({ start: m.index, afterOpen: rx.lastIndex });
+      continue;
+    }
+    const open = stack.pop();
+    if (!open) continue;
+    const corpoCompleto = contenuto.slice(open.afterOpen, m.index);
+    const summary = /^\s*<summary\b[^>]*>([\s\S]*?)<\/summary>/i.exec(corpoCompleto);
+    if (!summary) continue;
+    const intestazione = summary[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!/Dati(?:\s+tecnici)?\s+per\s+l['’]Accredito/i.test(intestazione)) continue;
+    risultati.push({ start: open.start, end: rx.lastIndex, body: corpoCompleto.slice(summary[0].length).trim() });
+  }
+  return risultati.sort((x, y) => x.start - y.start);
+}
+
+// Alcuni link incollati in vecchie liste usano erroneamente https://80407094#...
+// invece della sintassi ForumFree ?t=80407094#... .
+function correggiLinkNumericiConoscenze(testo) {
+  return String(testo || '').replace(/https?:\/\/(\d{6,10})(#[A-Za-z0-9_-]+)?(?=\]|[\s"'<>]|$)/gi,
+    (_, topic, ancora) => `?t=${topic}${ancora || ''}`);
+}
+
 function preparaRichiestaPerRegistro(raw) {
   let testo = String(raw || '').replace(/\r/g, '').trim();
   if (!testo) return '';
 
-  // 1) Il Registro non deve conservare il payload tecnico usato dal Generatore Accrediti.
-  // Il formato corrente lo racchiude nel <details> "Dati tecnici per l'Accredito".
-  testo = testo.replace(
-    /\n*<details>\s*<summary>[\s\S]*?Dati(?:\s+tecnici)?\s+per\s+l['’]Accredito[\s\S]*?<\/summary>[\s\S]*?<\/details>\s*/gi,
-    '\n'
-  );
+  // Rimuove SOLO il <details> tecnico, senza toccare quelli delle Conoscenze.
+  const blocchiTecnici = individuaBlocchiTecniciAccredito(testo);
+  for (const blocco of blocchiTecnici.slice().reverse()) {
+    testo = testo.slice(0, blocco.start) + '\n' + testo.slice(blocco.end);
+  }
+  testo = correggiLinkNumericiConoscenze(testo);
 
   // Compatibilità di sicurezza: se un vecchio post contenesse il protocollo V2/V3
   // fuori dal <details>, eliminiamo comunque il blocco tecnico dalla copia per il Registro.
@@ -1399,9 +1432,9 @@ function categoriaDaDetail(detailsHtml) {
 
 function normalizzaConoscenzeAccredito(items) {
   return (Array.isArray(items) ? items : []).map(g => {
-    const detailsHtml = String(g?.detailsHtml || g?.detailHtml || '').trim();
+    const detailsHtml = correggiLinkNumericiConoscenze(String(g?.detailsHtml || g?.detailHtml || '').trim());
     const conoscenze = Array.isArray(g?.conoscenze) && g.conoscenze.length
-      ? g.conoscenze.map(c => ({ nome: String(c?.nome || '').trim(), link: String(c?.link || '').trim() })).filter(c => c.nome && c.link)
+      ? g.conoscenze.map(c => ({ nome: String(c?.nome || '').trim(), link: correggiLinkNumericiConoscenze(String(c?.link || '').trim()) })).filter(c => c.nome && c.link)
       : estraiConoscenzeDaDetail(detailsHtml);
     const categoria = String(g?.categoria || categoriaDaDetail(detailsHtml)).trim();
     const tipo = String(g?.tipo || '').trim();
@@ -1564,10 +1597,10 @@ function leggiProtocolloAccrediti(raw) {
   // Formato ufficiale pubblicato dal Generatore Lista della Spesa:
   // <details> ... Dati per l'Accredito ... BOX A / E / F / G ... </details>
   // Non richiede marcatori tecnici aggiuntivi.
-  const details = testo.match(/<details>\s*<summary>[\s\S]*?Dati(?:\s+tecnici)?\s+per\s+l['’]Accredito[\s\S]*?<\/summary>\s*([\s\S]*?)<\/details>/i);
+  const details = individuaBlocchiTecniciAccredito(testo)[0];
   if (!details) return { ok: false, errore: 'Dati tecnici non trovati: copia il codice completo del post da Modifica, non solo il testo visibile sul forum.' };
 
-  const corpo = details[1].trim();
+  const corpo = details.body;
   const boxes = { A: [], E: [], F: [], G: [] };
   let corrente = null;
 
