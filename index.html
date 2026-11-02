@@ -1426,123 +1426,106 @@ function estraiConoscenzeDaLista(raw) {
   return out;
 }
 
+// Rileva il blocco esatto senza riordinare i tag della Scheda ForumFree.
+// La scheda usa <b>...<\/b> + <hr>, NON necessariamente un <br>.
 function trovaBloccoConoscenzeScheda(html) {
-  const rxStart = /<div\b[^>]*data-label=["']Conoscenze["'][^>]*>/i;
-  const m = rxStart.exec(html);
+  const m = /<div\b[^>]*data-label=["']Conoscenze["'][^>]*>/i.exec(html);
   if (!m) return null;
-  const start = m.index;
-  const dopoApertura = start + m[0].length;
-  const resto = html.slice(dopoApertura);
-  const next = /<div\b[^>]*data-label=["'][^"']+["'][^>]*>/i.exec(resto);
-  const end = next ? dopoApertura + next.index : html.length;
-  return { start, end, text: html.slice(start, end) };
+  const start=m.index, beginning=start+m[0].length;
+  let depth=1;
+  const tokens=/<\/?div\b[^>]*>/gi;
+  tokens.lastIndex=beginning;
+  let t;
+  while ((t=tokens.exec(html)) !== null) {
+    depth += /^<\/div/i.test(t[0]) ? -1 : 1;
+    if (depth===0) return {start, end:tokens.lastIndex, text:html.slice(start,tokens.lastIndex)};
+  }
+  return null;
 }
-
-function classificaTitoloSezioneConoscenze(htmlInterno) {
-  const plain = normalizeText(String(htmlInterno || '').replace(/<[^>]+>/g, ' '));
-  if (plain.includes('conoscenze scolastiche')) return 'scolastiche';
-  if (plain === 'extra' || plain.includes('conoscenze extra')) return 'extra';
-  if (plain === 'avanzate' || plain === 'avanzata' || plain.includes('conoscenze avanzate')) return 'avanzate';
+function classificaTitoloSezioneConoscenze(s) {
+  const plain=normalizeText(String(s||'').replace(/<[^>]*>/g,' '));
+  if (/^(?:conoscenze\s+)?scolastiche(?:\s*[-–:]\s*altri\s+anni)?$/.test(plain)) return 'scolastiche';
+  if (/^(?:conoscenze\s+)?extra$/.test(plain)) return 'extra';
+  if (/^(?:conoscenze\s+)?avanzat[ea]$/.test(plain)) return 'avanzate';
+  if (/^altro$/.test(plain)) return 'altro';
   return '';
 }
-
 function trovaSezioneConoscenzeNelBlocco(blocco, sezione) {
-  const rx = /<b\b[^>]*>([\s\S]*?)<\/b>\s*<br\s*\/?\s*>/gi;
-  const titoli = [];
-  let m;
-  while ((m = rx.exec(blocco)) !== null) {
-    const key = classificaTitoloSezioneConoscenze(m[1]);
-    if (key) titoli.push({ key, start: m.index, contentStart: rx.lastIndex });
+  const rx=/<b\b[^>]*>([\s\S]*?)<\/b>/gi;
+  const headers=[];let m;
+  while((m=rx.exec(blocco))!==null){
+    const k=classificaTitoloSezioneConoscenze(m[1]);
+    if(k) headers.push({key:k,start:m.index,contentStart:rx.lastIndex});
   }
-  const targetIndex = titoli.findIndex(t => t.key === sezione);
-  if (targetIndex < 0) return null;
-  const target = titoli[targetIndex];
-  const next = titoli[targetIndex + 1];
-  return { start: target.contentStart, end: next ? next.start : blocco.length };
+  const i=headers.findIndex(h=>h.key===sezione);
+  if(i<0)return null;
+  return {start:headers[i].contentStart,end:headers[i+1]?.start??blocco.length};
 }
-
+function detailsAlLivelloSuperiore(text) {
+  const results=[]; const rx=/<\/?details\b[^>]*>/gi;
+  let depth=0,at=-1,m;
+  while((m=rx.exec(text))!==null){
+    if(/^<\/details/i.test(m[0])){
+      if(depth>0 && --depth===0) results.push({start:at,end:rx.lastIndex,html:text.slice(at,rx.lastIndex)});
+    }else{if(depth===0)at=m.index; depth++;}
+  }
+  return results;
+}
+function gruppoConoscenzaEsistente(detailHtml, c) {
+  const links=estraiConoscenzeDaDetail(detailHtml);
+  const n=normalizeText(c.nome);
+  return links.some(x => (x.link && c.link && normalizeText(x.link)===normalizeText(c.link)) || normalizeText(x.nome)===n);
+}
 function aggiungiConoscenzeADetail(detailHtml, conoscenze) {
-  const mancanti = (conoscenze || []).filter(c => {
-    const nomeNorm = normalizeText(c.nome);
-    const corpoNorm = normalizeText(String(detailHtml || '').replace(/\[\/?URL[^\]]*\]/gi, ' '));
-    return nomeNorm && !corpoNorm.includes(nomeNorm);
-  });
-  if (!mancanti.length) return { html: detailHtml, aggiunte: 0, giaPresenti: (conoscenze || []).length };
-
-  const close = /<\/details>\s*$/i.exec(detailHtml);
-  if (!close) return { html: detailHtml, aggiunte: 0, giaPresenti: 0, errore: 'detail della categoria non chiuso correttamente' };
-  const before = detailHtml.slice(0, close.index).replace(/\s*$/, '');
-  const after = detailHtml.slice(close.index);
-  const righe = mancanti.map(c => `[URL=${c.link}]${c.nome}[/URL]`);
-  return {
-    html: before + '\n' + righe.join('\n') + '\n' + after,
-    aggiunte: mancanti.length,
-    giaPresenti: (conoscenze || []).length - mancanti.length
-  };
+  const missing=[],seen=new Set();
+  for(const c of (conoscenze||[])){
+    const id=normalizeText(c.link||c.nome);
+    if(seen.has(id))continue;seen.add(id);
+    if(!gruppoConoscenzaEsistente(detailHtml,c))missing.push(c);
+  }
+  if(!missing.length)return {html:detailHtml,aggiunte:0,giaPresenti:(conoscenze||[]).length};
+  const closing=/<\/details>\s*$/i.exec(detailHtml);
+  if(!closing)return {html:detailHtml,aggiunte:0,giaPresenti:0,errore:'detail non chiuso correttamente'};
+  const prefix=detailHtml.slice(0,closing.index).replace(/\s*$/,'');
+  const rows=missing.map(c=>`[URL=${c.link}]${c.nome}[/URL]`).join('\n');
+  return {html:prefix+'\n'+rows+'\n'+detailHtml.slice(closing.index),aggiunte:missing.length,giaPresenti:(conoscenze||[]).length-missing.length};
 }
-
 function aggiornaConoscenzeScheda(html, gruppiRaw) {
-  const gruppi = normalizzaConoscenzeAccredito(gruppiRaw);
-  const risultato = { html, richieste: gruppi.reduce((n,g) => n + g.conoscenze.length, 0), aggiunte: 0, detailCreati: 0, giaPresenti: 0, avvisi: [] };
-  if (!gruppi.length) return risultato;
-
-  let out = html;
-  gruppi.forEach(gruppo => {
-    if (!gruppo.sezione) {
-      risultato.avvisi.push(`${gruppo.tipo || 'Tipologia non indicata'} · ${gruppo.categoria}: non è possibile determinare automaticamente la sezione Scolastiche/Extra/Avanzate.`);
-      return;
+  const gruppi=normalizzaConoscenzeAccredito(gruppiRaw);
+  const result={html,richieste:gruppi.reduce((s,g)=>s+g.conoscenze.length,0),aggiunte:0,detailCreati:0,giaPresenti:0,avvisi:[]};
+  if(!gruppi.length)return result;
+  let out=html;
+  for(const g of gruppi){
+    if(!g.sezione){result.avvisi.push(`${g.tipo||'Tipologia sconosciuta'}: non è possibile individuare la sezione delle Conoscenze.`);continue;}
+    const b=trovaBloccoConoscenzeScheda(out);
+    if(!b){result.avvisi.push('Sezione Conoscenze assente dalla Scheda.');break;}
+    const section=trovaSezioneConoscenzeNelBlocco(b.text,g.sezione);
+    if(!section){result.avvisi.push(`${g.categoria}: sezione ${g.sezione} non trovata.`);continue;}
+    const sectText=b.text.slice(section.start,section.end);
+    const nome=normalizeText(g.categoria);
+    const d=detailsAlLivelloSuperiore(sectText).find(x=>{
+      const summary=/<summary\b[^>]*>([\s\S]*?)<\/summary>/i.exec(x.html);
+      return summary && normalizeText(summary[1].replace(/<[^>]*>/g,' '))===nome;
+    });
+    let replacement,pos,oldLength;
+    if(d){
+      const upd=aggiungiConoscenzeADetail(d.html,g.conoscenze);
+      if(upd.errore){result.avvisi.push(`${g.categoria}: ${upd.errore}.`);continue;}
+      pos=section.start+d.start;oldLength=d.html.length;replacement=upd.html;
+      result.aggiunte+=upd.aggiunte;result.giaPresenti+=upd.giaPresenti;
+    }else{
+      // Usa le classi icona, i link e la categoria definiti dalla Lista della Spesa.
+      // Il fallback costruisce un detail valido per dati V2 incompleti.
+      const valid=/^<details\b[\s\S]*<\/details>\s*$/i.test(g.detailsHtml);
+      replacement=valid ? g.detailsHtml.trim() : `<details><summary><u>${g.categoria}</u></summary>\n${g.conoscenze.map(c=>`[URL=${c.link}]${c.nome}[/URL]`).join('\n')}\n</details>`;
+      pos=section.start;oldLength=0;replacement='\n'+replacement+'\n';
+      result.aggiunte+=g.conoscenze.length;result.detailCreati++;
     }
-    const kb = trovaBloccoConoscenzeScheda(out);
-    if (!kb) {
-      risultato.avvisi.push('Nella Scheda Valori non è stata trovata la sezione data-label="Conoscenze".');
-      return;
-    }
-    const sezione = trovaSezioneConoscenzeNelBlocco(kb.text, gruppo.sezione);
-    if (!sezione) {
-      risultato.avvisi.push(`${gruppo.categoria}: nella sezione Conoscenze non è stato trovato il blocco ${gruppo.sezione}.`);
-      return;
-    }
-
-    const testoSezione = kb.text.slice(sezione.start, sezione.end);
-    const rxDetails = /<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>[\s\S]*?<\/details>/gi;
-    let md, trovato = null;
-    const categoriaNorm = normalizeText(gruppo.categoria);
-    while ((md = rxDetails.exec(testoSezione)) !== null) {
-      const summaryNorm = normalizeText(md[1].replace(/<[^>]+>/g, ' '));
-      if (summaryNorm === categoriaNorm || summaryNorm.includes(categoriaNorm)) {
-        trovato = { index: md.index, full: md[0] };
-        break;
-      }
-    }
-
-    let nuovoBlocco = kb.text;
-    if (trovato) {
-      const agg = aggiungiConoscenzeADetail(trovato.full, gruppo.conoscenze);
-      if (agg.errore) {
-        risultato.avvisi.push(`${gruppo.categoria}: ${agg.errore}.`);
-        return;
-      }
-      const pos = sezione.start + trovato.index;
-      nuovoBlocco = kb.text.slice(0, pos) + agg.html + kb.text.slice(pos + trovato.full.length);
-      risultato.aggiunte += agg.aggiunte;
-      risultato.giaPresenti += agg.giaPresenti;
-    } else {
-      if (!gruppo.detailsHtml || !/<details\b/i.test(gruppo.detailsHtml)) {
-        risultato.avvisi.push(`${gruppo.categoria}: manca il detail originale da inserire nella Scheda.`);
-        return;
-      }
-      // La categoria non esiste ancora: il detail prodotto dalla Lista viene
-      // inserito senza modificarlo, subito dopo il titolo della sezione corretta.
-      const inserimento = '\n' + gruppo.detailsHtml.trim() + '\n';
-      nuovoBlocco = kb.text.slice(0, sezione.start) + inserimento + kb.text.slice(sezione.start);
-      risultato.aggiunte += gruppo.conoscenze.length;
-      risultato.detailCreati += 1;
-    }
-    out = out.slice(0, kb.start) + nuovoBlocco + out.slice(kb.end);
-  });
-
-  risultato.html = out;
-  return risultato;
+    const newB=b.text.slice(0,pos)+replacement+b.text.slice(pos+oldLength);
+    out=out.slice(0,b.start)+newB+out.slice(b.end);
+  }
+  result.html=out;
+  return result;
 }
 
 function leggiProtocolloAccrediti(raw) {
@@ -2566,6 +2549,7 @@ function aggiornaVotoConLink(cellaHtml, nuovoVoto, linkVoto) {
   if (mStorico) {
     const storicoEsistente = mStorico[1];
     const vecchioAttuale = mStorico[2];
+    if (vecchioAttuale.toUpperCase() === String(nuovoVoto).toUpperCase()) return clean;
     const nuovoDel = linkVoto
       ? `<del>[URL=${linkVoto}]${vecchioAttuale}[/URL]</del> `
       : `<del>${vecchioAttuale}</del> `;
@@ -2708,32 +2692,135 @@ function ricalcolaTotaliSapienze(html) {
   );
 }
 
+function sezioneStudiCorrenti(html) {
+  const m=/<div\b[^>]*data-label=["']Studi["'][^>]*>/i.exec(html);
+  if(!m)return null;
+  const start=m.index,bodyStart=m.index+m[0].length;
+  const rx=/<\/?div\b[^>]*>/gi;rx.lastIndex=bodyStart;
+  let depth=1,t;
+  while((t=rx.exec(html))!==null){depth+=/^<\/div/i.test(t[0])?-1:1;if(depth===0)return {start,end:rx.lastIndex,text:html.slice(start,rx.lastIndex)};}
+  return null;
+}
+function votoCorrenteCella(s) {
+  // Ignora tutte le cancellature e i link storici, legge SOLO il voto finale.
+  const x=String(s||'').replace(/<del\b[^>]*>[\s\S]*?<\/del>/gi,' ').trim();
+  const m=/^([TOADS E])$/i.exec(x);return m?m[1].toUpperCase():'';
+}
+function statisticheEccezionale(html){
+  const b=sezioneStudiCorrenti(html);
+  if(!b)return null;
+  const text=b.text;
+  const byMateria=[];
+  const details=detailsAlLivelloSuperiore(text);
+  for(const d of details){
+    const sm=/<summary\b[^>]*>([\s\S]*?)<\/summary>/i.exec(d.html);
+    if(!sm)continue;
+    const materia=sm[1].replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+    if(!materia || /totale\s+eccezionale/i.test(materia))continue;
+    const rows=[...d.html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)];
+    let count=0;
+    for(const r of rows){
+      const tds=[...r[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)];
+      if(tds.length===2 && votoCorrenteCella(tds[1][1])==='E')count++;
+    }
+    if(count)byMateria.push({materia,materiaBreve:/^difesa contro le arti oscure$/i.test(materia)?'DCAO':materia,count});
+  }
+  return {total:byMateria.reduce((n,x)=>n+x.count,0),byMateria,blocco:b};
+}
 function ricalcolaTotaleEccezionale(html) {
-  // Isola la sezione "Piano di Studi" dell'anno CORRENTE (data-label="Studi"):
-  // solo le Conoscenze qui dentro contano per il contatore — non le Extra/Avanzate
-  // (altra sezione della scheda) né gli anni passati archiviati nello [SPOILER]
-  // in fondo, che restano intoccati come registro storico.
-  const rxSezione = /(data-label="Studi">[\s\S]*?)(<div data-label="[^"]*"|$)/;
-  const m = html.match(rxSezione);
-  if (!m) return html;
-  const sezione = m[1];
-
-  // conta le celle voto il cui valore FINALE (dopo eventuali <del> storici gia'
-  // presenti) e' "E" — stessa logica di lettura usata da aggiornaVotoConLink,
-  // cosi' un voto sceso da E a un voto inferiore non resta erroneamente contato.
-  const celleVoto = [...sezione.matchAll(/<td[^>]*text-align\s*:\s*center[^>]*>([\s\S]*?)<\/td>/gi)];
-  let conteggio = 0;
-  celleVoto.forEach(cella => {
-    const clean = cella[1].replace(/\s+/g, ' ').trim();
-    const mVoto = clean.match(/^(?:<del>[\s\S]*?<\/del>\s*)*([A-Z]+)\s*$/i);
-    if (mVoto && mVoto[1].toUpperCase() === 'E') conteggio++;
-  });
-
-  const sezioneAggiornata = sezione.replace(
-    /(<b>\s*Totale Eccezionale:?\s*<\/b>\s*)(\d+)/i,
-    `$1${conteggio}`
+  const st=statisticheEccezionale(html);if(!st)return html;
+  const recap=st.byMateria.map(x=>`${x.count} ${x.materiaBreve}`).join(' + ');
+  let part=st.blocco.text.replace(
+    /(<b>\s*Totale\s+Eccezionale\s*:?\s*<\/b>\s*)\d+(?:\s*\([^)]*\))?/i,
+    (_,prefix)=>prefix+st.total+(recap?` (${recap})`:'')
   );
-  return html.replace(sezione, sezioneAggiornata);
+  // Se la riga manca, includila nel Piano di studi prima della chiusura .cont.
+  if(!/<b>\s*Totale\s+Eccezionale\s*:?\s*<\/b>/i.test(part)){
+    const p=part.lastIndexOf('</div>');
+    if(p>=0)part=part.slice(0,p)+`\n<b>Totale Eccezionale:</b> ${st.total}${recap?` (${recap})`:''}\n`+part.slice(p);
+  }
+  return html.slice(0,st.blocco.start)+part+html.slice(st.blocco.end);
+}
+function aggiornaMetadatiScheda(html,tipoPg){
+  const student=tipoPg==='studente';
+  const st=student?statisticheEccezionale(html):null;
+  const price=st?4+Math.floor(st.total/10):null;
+  const data=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',day:'numeric',month:'numeric',year:'numeric'}).format(new Date());
+  // Solo spoiler principale: non toccare le tabelle di anni passati al suo interno.
+  let pos=html.indexOf('[SPOILER]');
+  if(pos<0){
+    const fields=[];
+    if(price!==null)fields.push(`<b>Prezzo per ogni Eccezionale:</b> ${price} PP`);
+    fields.push(`<b>Ultimo aggiornamento:</b> ${data}`);
+    return {html:html.trimEnd()+'\n\n[SPOILER]'+fields.join('\n\n')+'[/SPOILER]',prezzo:price,data,avvisi:st?[]:(student?['Impossibile leggere il Piano di Studi per calcolare il prezzo delle Eccezionale.']:[])};
+  }
+  let result=html;
+  if(price!==null){
+    // Le formule pregresse possono avere +1(10 E)... = 6 PP: sostituisci tutta la riga.
+    const after=result.slice(pos);
+    if(/<b>\s*Prezzo\s+per\s+ogni\s+Eccezionale\s*:?\s*<\/b>[^\n]*/i.test(after)){
+      result=result.slice(0,pos)+after.replace(/(<b>\s*Prezzo\s+per\s+ogni\s+Eccezionale\s*:?\s*<\/b>)[^\n]*/i,`$1 ${price} PP`);
+    }else result=result.slice(0,pos+9)+`<b>Prezzo per ogni Eccezionale:</b> ${price} PP\n\n`+result.slice(pos+9);
+  }
+  pos=result.indexOf('[SPOILER]');
+  const tail=result.slice(pos);
+  if(/<b>\s*Ultimo\s+aggiornamento\s*:?\s*<\/b>\s*:?\s*[^\n\[]*/i.test(tail)){
+    result=result.slice(0,pos)+tail.replace(/(<b>\s*Ultimo\s+aggiornamento\s*:?\s*<\/b>)\s*:?\s*[^\n\[]*/i,(_,label)=>`${label}${/aggiornamento\s*:\s*<\/b>/i.test(label)?'':':'} ${data}`);
+  }else result=result.slice(0,pos+9)+`<b>Ultimo aggiornamento:</b> ${data}\n\n`+result.slice(pos+9);
+  return {html:result,prezzo:price,data,avvisi:st?[]:(student?['Piano di Studi non riconosciuto; prezzo delle Eccezionale non aggiornato.']:[])};
+}
+
+// Il protocollo V3 porta l'anno di OGNI variazione: il voto di un anno
+// archiviato si aggiorna esclusivamente nel suo vecchio Piano di Studi.
+// Questo evita di modificare per errore una conoscenza omonima di un altro anno.
+function trovaPianoArchiviato(html,anno){
+  const roman={5:'V',6:'VI',7:'VII'}[String(anno)];
+  if(!roman)return null;
+  const spoiler=html.indexOf('[SPOILER]');
+  if(spoiler<0)return null;
+  const tail=html.slice(spoiler+9);
+  const rx=/<details\b[^>]*>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>/gi;
+  let m;
+  while((m=rx.exec(tail))!==null){
+    const summary=normalizeText(m[1].replace(/<[^>]*>/g,' '));
+    if(!new RegExp(`piano\\s+di\\s+studi\\s*${roman}\\s+anno`,'i').test(summary))continue;
+    const start=spoiler+9+m.index;
+    const tokens=/<\/?details\b[^>]*>/gi;tokens.lastIndex=start;
+    let depth=0,t;
+    while((t=tokens.exec(html))!==null){
+      depth+=/^<\/details/i.test(t[0])?-1:1;
+      if(depth===0)return {start,end:tokens.lastIndex,text:html.slice(start,tokens.lastIndex)};
+    }
+  }
+  return null;
+}
+function aggiornaVotiStudenteConAnni(html,operazioni,linkVoto){
+  const warnings=[];
+  let out=html;
+  const current=sezioneStudiCorrenti(html);
+  const mCurrent=current?.text.match(/PIANO\s+DI\s+STUDI\s*[-:]?\s*(VII|VI|V)\s+ANNO/i);
+  const currentYear=mCurrent?({V:'5',VI:'6',VII:'7'}[mCurrent[1].toUpperCase()]):'';
+  for(const op of operazioni){
+    const anno=String(op?.anno||'');
+    const voto=String(op?.votoArrivo||op?.to||'').trim().toUpperCase();
+    const nome=String(op?.conoscenza||'').trim();
+    const materia=String(op?.materia||'').trim();
+    const raw=op?.type==='all'
+      ? `TUTTE: ${materia}: ${String(op.from||'').toUpperCase()}>${voto}`
+      : `${nome}: ${voto}`;
+    if(!voto || (!nome&&op?.type!=='all'))continue;
+    let zone;
+    if(anno && anno!==currentYear)zone=trovaPianoArchiviato(out,anno);
+    else zone=sezioneStudiCorrenti(out);
+    if(!zone){
+      warnings.push(`${materia||nome}: Piano di Studi dell'anno ${anno||'corrente'} non presente; il voto non è stato modificato.`);
+      continue;
+    }
+    const updated=aggiornaPianoStudiStudente(zone.text,raw,linkVoto);
+    if(updated===zone.text)warnings.push(`${materia||nome}: nessuna cella corrispondente trovata nell'anno ${anno||currentYear}.`);
+    out=out.slice(0,zone.start)+updated+out.slice(zone.end);
+  }
+  return {html:ricalcolaTotaleEccezionale(out),avvisi:warnings};
 }
 
 function aggiornaPianoOSapienze(html) {
@@ -3033,7 +3120,12 @@ function elaboraTerminale() {
 
   const risultatoConoscenze = aggiornaConoscenzeScheda(html, protocollo.conoscenzeAcquistate || []);
   html = risultatoConoscenze.html;
-  html = aggiornaPianoOSapienze(html);
+  const risultatoVoti = protocollo.tipoPg === 'studente' && Array.isArray(protocollo.votiStudente) && protocollo.votiStudente.length
+    ? aggiornaVotiStudenteConAnni(html, protocollo.votiStudente, (document.getElementById('linkVoto').value || '').trim())
+    : {html: aggiornaPianoOSapienze(html), avvisi: []};
+  html = risultatoVoti.html;
+  const risultatoMetadati = aggiornaMetadatiScheda(html, protocollo.tipoPg);
+  html = risultatoMetadati.html;
 
   const registro = costruisciRegistro(dataScheda.iniziali, updatedValori.finali, deltas['Punti Casa'] || 0, puntiCasaIniziali, extraInfo, protocollo.rettificheStaff || []);
 
@@ -3086,6 +3178,9 @@ function elaboraTerminale() {
         ' nella Scheda Valori e non sono state applicate: <b>' +
         updatedValori.ignorati.join(', ') + '</b>.');
     }
+
+    if (risultatoVoti.avvisi?.length) avvisiStat.push('<b>⚠ Voti:</b> '+risultatoVoti.avvisi.map(escapeHtmlUI).join('<br>'));
+    if (risultatoMetadati.avvisi?.length) avvisiStat.push('<b>⚠ Piano di studi:</b> '+risultatoMetadati.avvisi.map(escapeHtmlUI).join('<br>'));
 
     if (risultatoConoscenze.avvisi && risultatoConoscenze.avvisi.length) {
       avvisiStat.push('<b>⚠ Conoscenze:</b> ' + risultatoConoscenze.avvisi.map(escapeHtmlUI).join('<br>'));
