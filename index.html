@@ -1715,6 +1715,18 @@ function applicaProtocolloLista(mostraErrore) {
     status.style.color = '#234132';
     const formato = Number(d.versione) === 2 ? 'V2' : 'Formato attuale';
     status.innerHTML = `<b>${d.nomePg || 'PG'} · ${d.tipoPg === 'studente' ? 'Studente' : 'Adulto'}</b> <span class="format-tag">${formato}</span>`;
+    const revisione=verificaPremiProtocollo(dOriginale,raw,d);
+    if(!revisione.ok) {
+      status.style.background='var(--red-soft)'; status.style.borderLeftColor='var(--red)'; status.style.color='#6B2727';
+      status.innerHTML+='<div style="margin-top:7px;white-space:pre-line"><b>Premi missioni incoerenti:</b> '+escapeHtmlUI(revisione.errore)+'</div>';
+    }else if(revisione.legacy) {
+      status.innerHTML+='<div style="margin-top:6px;font-size:11px">Richiesta precedente: premi delle missioni verificati nei limiti dei dati presenti. Controlla i requisiti ONGame.</div>';
+    }else if(dOriginale.verificaPremi) {
+      status.innerHTML+='<div style="margin-top:6px;font-size:11px">Premi missioni: calcolo V3.5 e totale riconciliati.</div>';
+    }else {
+      status.innerHTML+='<div style="margin-top:6px;font-size:11px">Formato precedente senza dettaglio delle missioni. Controlla i premi se applicabile.</div>';
+    }
+
   }
   queueMicrotask(aggiornaStatoWorkspace);
   return d;
@@ -3061,6 +3073,153 @@ function applicaOperazioniCatalogo(html, operazioni) {
   return {html:out,applicate,avvisi};
 }
 
+// ====================================================================
+// Audit premi delle missioni. Indipendente da calcolaRole della Lista:
+// impedisce che totali generati da versioni superate vengano accreditati.
+// ====================================================================
+const AUDIT_TIPI_PREMIO = ['Prestigio','Popolarità','Stima Docenti','Bontà','Malvagità','Virtuoso','Sinistro','Punti Casa','Dialettica','Acume','Empatia','Percezione','Potenza','Tecnica','Volontà','Destrezza','Fatica','Resistenza','Salute'];
+function auditNumero(v) {
+  if (typeof v === 'string') { v=v.trim(); v=v.includes(',') ? v.replace(/\./g,'').replace(',','.') : v; }
+  const n=Number(v);
+  return Number.isFinite(n)?n:0;
+}
+function auditSomma(a,b) {
+  for (const [k,v] of Object.entries(b||{})) a[k]=(a[k]||0)+auditNumero(v);
+  return a;
+}
+function auditVicini(a,b) {return Math.abs(auditNumero(a)-auditNumero(b))<0.00001;}
+function auditPremiRole(role,tasso) {
+  const n=Math.max(0,auditNumero(role.numPosts));
+  const base=auditNumero(tasso);
+  const ms=(role.missioni||[]).filter(m=>String(m.nome||'').trim());
+  const norm=ms.filter(m=>!m.completamento),comp=ms.filter(m=>m.completamento);
+  const totale={'Punti Post':n*base};
+  for(const m of norm) {
+    const rate=auditNumero(m.ppPostRate),fixed=auditNumero(m.ppFisso);
+    const cap=m.ppPostCap==null?n:Math.max(0,Math.min(n,auditNumero(m.ppPostCap)));
+    if(rate) totale['Punti Post']=Math.max(totale['Punti Post'],rate*cap+base*(n-cap));
+    if(fixed) totale['Punti Post']=Math.max(totale['Punti Post'],n*base+fixed);
+  }
+  for(const tipo of AUDIT_TIPI_PREMIO) {
+    const vals=norm.map(m=>auditNumero(m.premi?.[tipo] ?? m[tipo])).filter(v=>v!==0);
+    totale[tipo]=vals.length?Math.max(...vals):0;
+  }
+  for(const m of comp) {
+    const rate=auditNumero(m.ppPostRate);
+    const cap=m.ppPostCap==null?n:Math.max(0,Math.min(n,auditNumero(m.ppPostCap)));
+    if(rate)totale['Punti Post']+=rate*cap;
+    totale['Punti Post']+=auditNumero(m.ppFisso);
+    for(const tipo of AUDIT_TIPI_PREMIO)totale[tipo]+=auditNumero(m.premi?.[tipo] ?? m[tipo]);
+  }
+  if(!role.galeoniPerExtra && auditNumero(role.galeoniSpesi))
+    totale.Galeoni=-auditNumero(role.galeoniSpesi)*(auditNumero(role.coeffDebito)||1);
+  return totale;
+}
+function auditPremioStandalone(m) {
+  const out={'Punti Post':auditNumero(m.ppFisso)};
+  for(const k of AUDIT_TIPI_PREMIO) if(auditNumero(m.premi?.[k]))out[k]=auditNumero(m.premi[k]);
+  for(const [k,v] of Object.entries(m.parametri||{}))if(auditNumero(v))out[k]=auditNumero(v);
+  return out;
+}
+function auditBoxAMappa(box) {
+  const result={};
+  const tipi=['Punti Post','Stima Docenti','Punti Casa','Galeoni Extra','Galeoni','Bontà','Malvagità','Prestigio','Popolarità','Virtuoso','Sinistro','Dialettica',
+    'Acume','Empatia','Percezione','Potenza','Tecnica','Volontà','Destrezza','Fatica','Resistenza','Salute'];
+  for(const line of (box||[])) {
+    const m=String(line).trim().match(/^([+-]?\d+(?:[.,]\d+)?)\s+(.+)$/);
+    if(!m)continue;
+    const label=tipi.find(k=>normalizeText(k)===normalizeText(m[2]));
+    if(label)result[label]=(result[label]||0)+auditNumero(m[1]);
+  }
+  return result;
+}
+function auditControllaDizionari(a,b,ignora=[]) {
+  const errori=[];
+  for(const k of new Set([...Object.keys(a||{}),...Object.keys(b||{})])) {
+    if(ignora.includes(k))continue;
+    if(!auditVicini(a?.[k],b?.[k]))errori.push(`${k}: previsto ${auditNumero(a?.[k])}, dichiarato ${auditNumero(b?.[k])}`);
+  }
+  return errori;
+}
+function auditLegacyRole(raw,d) {
+  const pre=String(raw||'').split(/\[FF-ACCREDITI-V[23]\]/i)[0];
+  if(!/Missioni FH\/FW completate:/i.test(pre))return {role:[],errori:[],incomplete:false};
+  const blocks=pre.split(/<b>Role\s*\d*\s*:\s*<\/b>/i).slice(1);
+  const out=[],err=[];
+  for(const b of blocks){
+    if(!/Missioni FH\/FW completate:/i.test(b))continue;
+    const n=/(\d+(?:[.,]\d+)?)\s+post scritti/i.exec(b);
+    const sez=/<b>Missioni FH\/FW completate:<\/b>([\s\S]*?)<b>Totale da questa Role:<\/b>\s*([^\n]+)/i.exec(b);
+    if(!n||!sez) return {role:out,errori:err,incomplete:true};
+    const missioni=[];
+    for(const ln of sez[1].split('\n')) {
+      const m=/^\s*-\s*(.*?)\s*:\s*((?:[+-]?\d[\s\S]*)?)\s*$/.exec(ln);
+      if(!m)continue;
+      const dsc=m[2],premi={};
+      for(const k of AUDIT_TIPI_PREMIO){
+        const matches=[...dsc.matchAll(new RegExp('([+-]?\\d+(?:[.,]\\d+)?)\\s+'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:\\b|$)','gi'))];
+        if(matches.length)premi[k]=auditNumero(matches[0][1]);
+      }
+      const ppost=/([+-]?\d+(?:[.,]\d+)?)\s*PP\s*\/\s*post(?:\s*\(fino a\s*(\d+)\s*post\))?/i.exec(dsc);
+      const fisso=/([+-]?\d+(?:[.,]\d+)?)\s*PP\s*fissi?/i.exec(dsc);
+      missioni.push({nome:m[1],completamento:/missione a completamento/i.test(m[1]),
+        ppPostRate:ppost?auditNumero(ppost[1]):0,ppPostCap:ppost?.[2]??null,
+        ppFisso:fisso?auditNumero(fisso[1]):0,premi});
+    }
+    if(!missioni.length)return {role:out,errori:err,incomplete:true};
+    const expected=auditPremiRole({numPosts:auditNumero(n[1]),missioni},auditNumero(d?.ripristinoValori?.tassoBase)||1);
+    const claim={};
+    for(const line of String(sez[2]).split(/,\s*/)){
+      const m=/^([+-]?\d+(?:[.,]\d+)?)\s+(.+)\s*$/.exec(line.trim());
+      if(m)claim[m[2]]=auditNumero(m[1]);
+    }
+    const e=auditControllaDizionari(expected,claim,['Galeoni','Galeoni Extra']);
+    if(e.length)err.push('Role '+(out.length+1)+': '+e.join(' · '));
+    out.push({expected,claim,missioni});
+  }
+  return {role:out,errori:err,incomplete:out.length===0};
+}
+function verificaPremiProtocollo(originale,raw,rettificato) {
+  const d=originale||{};
+  const p=d.verificaPremi;
+  if(!p) {
+    const l=auditLegacyRole(raw,d);
+    if(!l.errori.length) return {ok:true,legacy:l.role.length>0||l.incomplete,incomplete:l.incomplete,errore:''};
+    // Le rettifiche Staff documentate possono correggere le vecchie richieste:
+    // il confronto riguarda gli importi nel BOX A, non la narrativa immutabile.
+    const diff={};
+    for(const r of l.role)for(const k of new Set([...Object.keys(r.expected),...Object.keys(r.claim)])) {
+      if(k==='Galeoni'||k==='Galeoni Extra')continue;
+      const delta=auditNumero(r.expected[k])-auditNumero(r.claim[k]);
+      if(Math.abs(delta)>0.00001)diff[k]=(diff[k]||0)+delta;
+    }
+    const prima=auditBoxAMappa(d.boxA),dopo=auditBoxAMappa(rettificato?.boxA||d.boxA);
+    const corretto=Object.entries(diff).every(([k,delta])=>auditVicini(dopo[k],auditNumero(prima[k])+delta));
+    const motivi=(rettificato?.rettificheStaff||[]).filter(x=>String(x.motivo||'').trim());
+    if(corretto && motivi.length) return {ok:true,legacy:true,rettificato:true,errore:''};
+    return {ok:false,legacy:true,errore:'Premi incoerenti nella Lista precedente. '+l.errori.join('\n')+
+      '\nCorreggi il BOX A con le Rettifiche Staff (motivando la correzione), oppure rigenera la Lista.'};
+  }
+  if(p.versione!==1||!Array.isArray(p.roles)||!Array.isArray(p.standalone)||!p.totale||!p.resto)
+    return {ok:false,errore:'Blocco verificaPremi non valido o incompleto.'};
+  const errors=[];
+  const aggregato={};
+  p.roles.forEach((role,i)=>{
+    const expected=auditPremiRole(role,p.tassoBase);
+    errors.push(...auditControllaDizionari(expected,role.totali,role.galeoniPerExtra?['Galeoni','Galeoni Extra']:[]).map(e=>`Role ${i+1}: ${e}`));
+    auditSomma(aggregato,role.totali);
+  });
+  p.standalone.forEach((m,i)=>{
+    const expected=auditPremioStandalone(m);
+    errors.push(...auditControllaDizionari(expected,m.totali).map(e=>`Missione senza role ${i+1}: ${e}`));
+    auditSomma(aggregato,m.totali);
+  });
+  auditSomma(aggregato,p.resto);
+  errors.push(...auditControllaDizionari(aggregato,p.totale).map(e=>'Riconciliazione totale: '+e));
+  errors.push(...auditControllaDizionari(aggregato,auditBoxAMappa(d.boxA)).map(e=>'Box A: '+e));
+  return {ok:errors.length===0,legacy:false,errore:errors.slice(0,12).join('\n')};
+}
+
 function elaboraTerminale() {
   const protocollo = applicaProtocolloLista(true);
   if (!protocollo) return;
@@ -3071,6 +3230,16 @@ function elaboraTerminale() {
   }
   const checkRettifiche = validaRettificheStaff(protocollo);
   if (!checkRettifiche.ok) { alert(checkRettifiche.errore); renderRettificheStaff(leggiProtocolloAccrediti(document.getElementById('inputComplessivoOriginale').value || '').data); return; }
+  const richiestaRaw = document.getElementById('inputComplessivoOriginale').value || '';
+  const richiestaOriginale = leggiProtocolloAccrediti(richiestaRaw).data;
+  const controlloPremi = verificaPremiProtocollo(richiestaOriginale, richiestaRaw, protocollo);
+  if (!controlloPremi.ok) {
+    alert('Controllo premi missioni: accredito bloccato.\n\n'+controlloPremi.errore);
+    return;
+  }
+  if (controlloPremi.incomplete && /Missioni FH\/FW completate:/i.test(richiestaRaw) &&
+      !confirm('La richiesta precedente contiene missioni, ma non è possibile verificarne automaticamente tutti i premi. Hai controllato i calcoli e i requisiti prima dell’accredito?')) return;
+
   const schedaValoriHTML = document.getElementById('inputScheda').value || '';
   const schedaCheck = validaSchedaValori(schedaValoriHTML);
   if (!schedaCheck.ok) { alert(schedaCheck.vuota ? 'Incolla la Scheda Valori.' : schedaCheck.motivo + '.'); return; }
