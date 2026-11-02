@@ -1545,6 +1545,7 @@ function leggiProtocolloAccrediti(raw) {
         if (!Array.isArray(data.pozioniProdotte)) data.pozioniProdotte = [];
         if (data.catalogVersion == null) data.catalogVersion = '';
         if (data.protocolRevision == null) data.protocolRevision = '';
+        data.noteStaff = typeof data.noteStaff === 'string' ? data.noteStaff.slice(0,2500).trim() : '';
         const dalPayload = normalizzaConoscenzeAccredito(data.conoscenzeAcquistate || []);
         data.conoscenzeAcquistate = dalPayload.length ? dalPayload : estraiConoscenzeDaLista(testo);
         return { ok: true, data };
@@ -1720,7 +1721,7 @@ function applicaProtocolloLista(mostraErrore) {
       status.style.background='var(--red-soft)'; status.style.borderLeftColor='var(--red)'; status.style.color='#6B2727';
       status.innerHTML+='<div style="margin-top:7px;white-space:pre-line"><b>Premi missioni incoerenti:</b> '+escapeHtmlUI(revisione.errore)+'</div>';
     }else if(revisione.legacy) {
-      status.innerHTML+='<div style="margin-top:6px;font-size:11px">Richiesta precedente: premi delle missioni verificati nei limiti dei dati presenti. Controlla i requisiti ONGame.</div>';
+      status.innerHTML+='<div style="margin-top:6px;font-size:11px">Richiesta precedente: premi delle missioni verificati nei limiti dei dati presenti. Controlla i requisiti ONGame e gli eventuali bonus da oggetti.</div>';
     }else if(dOriginale.verificaPremi) {
       status.innerHTML+='<div style="margin-top:6px;font-size:11px">Premi missioni: calcolo V3.5 e totale riconciliati.</div>';
     }else {
@@ -3141,16 +3142,49 @@ function auditControllaDizionari(a,b,ignora=[]) {
   }
   return errori;
 }
+// Legge le righe del riepilogo senza usare la virgola come separatore:
+// 7,5 PP / 0,5 Virtuoso sono un singolo valore, non due premi distinti.
+function auditPremiDaRigaTotale(riga) {
+  const claim={};
+  const tipi=['Punti Post','Stima Docenti','Punti Casa','Galeoni Extra','Galeoni','Bontà','Malvagità','Prestigio','Popolarità','Virtuoso','Sinistro','Dialettica',
+    'Acume','Empatia','Percezione','Potenza','Tecnica','Volontà','Destrezza','Fatica','Resistenza','Salute'];
+  const alt=tipi.slice().sort((a,b)=>b.length-a.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|');
+  const re=new RegExp('([+-]?\\d+(?:[.,]\\d+)?)\\s+('+alt+')(?=\\s*[,;()]|\\s*$)','gi');
+  for (const m of String(riga||'').matchAll(re)) {
+    const label=tipi.find(k=>normalizeText(k)===normalizeText(m[2]));
+    if(label)claim[label]=(claim[label]||0)+auditNumero(m[1]);
+  }
+  return claim;
+}
+
+// Una richiesta V3 può avere bonus extra descritti nel testo della Role,
+// ma non rappresentati come premi della missione (es. Cioccorana consumata).
+// Li aggiungiamo alla previsione SOLO se il bonus è dichiarato esplicitamente
+// nel totale della Role e l'oggetto appare anche nei movimenti del Bagaglio.
+function auditBonusOggettoLegacy(riga,boxG) {
+  let bonus=0;
+  const s=String(riga||'');
+  const dettagli=(boxG||[]).map(String);
+  const ciocco=/(?:considerat[oa]\s+il|inclus[oa]\s+il|compres[oa]\s+il)\s*\+?([0-9]+(?:[.,][0-9]+)?)\s*(?:PP\s*)?dell[ae]\s+cioccoran[ae]/ig;
+  for (const m of s.matchAll(ciocco)) {
+    if(dettagli.some(r=>/cioccoran[ae]/i.test(r)&&/(?:CONTATORE\s+USI|consumat[oaie]|\busa(?:to|ta|ti|te)\b|\b-\s*\d+\b)/i.test(r))) {
+      bonus+=auditNumero(m[1]);
+    }
+  }
+  return bonus;
+}
+
 function auditLegacyRole(raw,d) {
   const pre=String(raw||'').split(/\[FF-ACCREDITI-V[23]\]/i)[0];
   if(!/Missioni FH\/FW completate:/i.test(pre))return {role:[],errori:[],incomplete:false};
   const blocks=pre.split(/<b>Role\s*\d*\s*:\s*<\/b>/i).slice(1);
   const out=[],err=[];
+  let incomplete=false;
   for(const b of blocks){
     if(!/Missioni FH\/FW completate:/i.test(b))continue;
     const n=/(\d+(?:[.,]\d+)?)\s+post scritti/i.exec(b);
     const sez=/<b>Missioni FH\/FW completate:<\/b>([\s\S]*?)<b>Totale da questa Role:<\/b>\s*([^\n]+)/i.exec(b);
-    if(!n||!sez) return {role:out,errori:err,incomplete:true};
+    if(!n||!sez){incomplete=true;continue;}
     const missioni=[];
     for(const ln of sez[1].split('\n')) {
       const m=/^\s*-\s*(.*?)\s*:\s*((?:[+-]?\d[\s\S]*)?)\s*$/.exec(ln);
@@ -3166,18 +3200,18 @@ function auditLegacyRole(raw,d) {
         ppPostRate:ppost?auditNumero(ppost[1]):0,ppPostCap:ppost?.[2]??null,
         ppFisso:fisso?auditNumero(fisso[1]):0,premi});
     }
-    if(!missioni.length)return {role:out,errori:err,incomplete:true};
+    if(!missioni.length){incomplete=true;continue;}
     const expected=auditPremiRole({numPosts:auditNumero(n[1]),missioni},auditNumero(d?.ripristinoValori?.tassoBase)||1);
-    const claim={};
-    for(const line of String(sez[2]).split(/,\s*/)){
-      const m=/^([+-]?\d+(?:[.,]\d+)?)\s+(.+)\s*$/.exec(line.trim());
-      if(m)claim[m[2]]=auditNumero(m[1]);
-    }
+    expected['Punti Post']+=auditBonusOggettoLegacy(sez[2],d?.boxG);
+    const claim=auditPremiDaRigaTotale(sez[2]);
+    // Se il riepilogo non è interpretabile, segnaliamo la necessità di
+    // controllo manuale, senza inventare un totale pari a zero.
+    if(Object.keys(claim).length===0){incomplete=true;continue;}
     const e=auditControllaDizionari(expected,claim,['Galeoni','Galeoni Extra']);
     if(e.length)err.push('Role '+(out.length+1)+': '+e.join(' · '));
     out.push({expected,claim,missioni});
   }
-  return {role:out,errori:err,incomplete:out.length===0};
+  return {role:out,errori:err,incomplete:incomplete||out.length===0};
 }
 function verificaPremiProtocollo(originale,raw,rettificato) {
   const d=originale||{};
@@ -3298,7 +3332,12 @@ function elaboraTerminale() {
 
   const registro = costruisciRegistro(dataScheda.iniziali, updatedValori.finali, deltas['Punti Casa'] || 0, puntiCasaIniziali, extraInfo, protocollo.rettificheStaff || []);
 
-  document.getElementById('outForum').value = registro;
+  const notaPlayer = typeof protocollo.noteStaff === 'string' ? protocollo.noteStaff.trim().slice(0,2500) : '';
+  const notaRegistro = notaPlayer
+    ? '\n\n<b>NOTE DEL PLAYER — VERIFICA MANUALE (non applicate automaticamente):</b>\n' +
+      notaPlayer.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    : '';
+  document.getElementById('outForum').value = registro + notaRegistro;
   document.getElementById('outScheda').value = html;
 
   const risultatiPanel = document.getElementById('risultati_panel');
@@ -3320,6 +3359,7 @@ function elaboraTerminale() {
     if (syncCommercio.verificati) parti.push(`catalogo verificato ✓`);
     if ((protocollo.pozioniProdotte || []).length) parti.push(`${protocollo.pozioniProdotte.length} pozioni prodotte`);
     if ((protocollo.rettificheStaff || []).length) parti.push(`${protocollo.rettificheStaff.length} rettifiche`);
+    if (notaPlayer) parti.push('1 nota Staff da verificare');
     if (risultatoCatalogo.applicate?.length) parti.push(`${risultatoCatalogo.applicate.length} modifiche oggetti`);
     if (risultatoBagaglio.trasferimenti?.length) {
       const nTrasfValidi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore).length;
@@ -3332,6 +3372,12 @@ function elaboraTerminale() {
   const warnBox = document.getElementById('ignorati_box');
   if (warnBox) {
     const avvisiStat = [];
+
+    if (notaPlayer) {
+      avvisiStat.push('<b>📝 Nota aggiuntiva del player — intervento manuale:</b><br>' +
+        escapeHtmlUI(notaPlayer).replace(/\n/g,'<br>') +
+        '<br><b>Nessuna variazione è stata eseguita automaticamente per questa nota.</b>');
+    }
 
     if (risultatoBagaglio.trasferimenti && risultatoBagaglio.trasferimenti.length) {
       const validi = risultatoBagaglio.trasferimenti.filter(t => t.validato !== false && !t.errore);
