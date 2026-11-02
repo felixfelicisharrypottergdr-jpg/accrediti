@@ -3273,8 +3273,12 @@ function auditLegacyRole(raw,d) {
       const m=/^\s*-\s*(.*?)\s*:\s*((?:[+-]?\d[\s\S]*)?)\s*$/.exec(ln);
       if(!m)continue;
       const dsc=m[2],premi={};
+      // Non usare \b dopo il nome del premio: con parole come
+      // "Popolarità", "Bontà" e "Malvagità", JS non considera "à"
+      // un carattere word e non riconosce il premio seguito da virgola.
+      // Il lookahead Unicode impedisce anche match su prefissi di nomi.
       for(const k of AUDIT_TIPI_PREMIO){
-        const matches=[...dsc.matchAll(new RegExp('([+-]?\\d+(?:[.,]\\d+)?)\\s+'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:\\b|$)','gi'))];
+        const matches=[...dsc.matchAll(new RegExp('([+-]?\\d+(?:[.,]\\d+)?)\\s+'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?![\\p{L}\\p{N}\\p{M}_])','giu'))];
         if(matches.length)premi[k]=auditNumero(matches[0][1]);
       }
       const ppost=/([+-]?\d+(?:[.,]\d+)?)\s*PP\s*\/\s*post(?:\s*\(fino a\s*(\d+)\s*post\))?/i.exec(dsc);
