@@ -2776,30 +2776,371 @@ function aggiornaPianoStudiStudente(html, rawMods, linkVoto) {
   return out;
 }
 
-function aggiornaSapienzeAdulto(html, rawMods) {
-  const mods = parseKeyValueList(rawMods);
-  if (!mods.length) return html;
+// Sapienze Fisiche e Sociali: la Lista può acquistare un Livello I anche quando
+// il relativo blocco non compare ancora nella Scheda Valori. Non è una
+// modifica di un Parametro Fisico: le Sapienze sono una sezione autonoma.
+const SAPIENZE_MAGICHE_SCHEDA = Object.freeze({
+  "Arcaica": [
+    "Appare Vestigium",
+    "Avensegium",
+    "Esorcista",
+    "Spezzaincantesimi",
+    "Tracciante"
+  ],
+  "Difensiva": [
+    "Energia Difensiva",
+    "Protego Maxima",
+    "Protego Totalum",
+    "Protego Volantis",
+    "Repello Inimicum"
+  ],
+  "Divinatoria": [
+    "Visione del Passato",
+    "Proiezione Astrale",
+    "Psicometria del Futuro",
+    "Chiaroveggenza",
+    "Psicometria del Passato"
+  ],
+  "Elementale": [
+    "Aqua Eructo",
+    "Dominusterra",
+    "Incendio Maxima",
+    "Manipolo",
+    "Ventus Maxima"
+  ],
+  "Erbologica": [
+    "Erborista",
+    "Amico delle Piante",
+    "Custode delle Piante",
+    "Coltivatore di Piante",
+    "Pax"
+  ],
+  "Magizoologica": [
+    "Amico delle Creature",
+    "Addestratore di Creature",
+    "Custode delle Creature",
+    "Allevatore di Creature",
+    "Imposium"
+  ],
+  "Medimagica": [
+    "Diagnosta",
+    "Terapista",
+    "Chirurgo",
+    "Emendo",
+    "Vulnera Sanentur"
+  ],
+  "Mentale": [
+    "Desiderium",
+    "Dissimulo",
+    "Legilimens",
+    "Oblivion",
+    "Occlumanzia"
+  ],
+  "Offensiva": [
+    "Ad Caelum",
+    "Ardor",
+    "Bombarda Maxima",
+    "Confractus",
+    "Energia Offensiva"
+  ],
+  "Oscura": [
+    "Ardemonio",
+    "Damnum",
+    "Dolohoferio",
+    "Ritualista Oscuro",
+    "Sectumsempra"
+  ],
+  "Pozionistica": [
+    "Speziale",
+    "Chimico",
+    "Calderaio",
+    "Tocco Magico",
+    "Distillatore"
+  ],
+  "Trasfigurativa": [
+    "Commutatio",
+    "Evanesco",
+    "Evocatio",
+    "Locomotor",
+    "Verto"
+  ]
+});
+const SAPIENZE_FISICHE_SCHEDA = Object.freeze({
+  prestanza:{nome:'Prestanza'}, rapidita:{nome:'Rapidità'},
+  resilienza:{nome:'Resilienza'}, vigore:{nome:'Vigore'}
+});
+const SAPIENZE_SOCIALI_SCHEDA = Object.freeze({
+  leader:{nome:'Leader'}, motivatore:{nome:'Motivatore'},
+  oppositore:{nome:'Oppositore'}, persuasore:{nome:'Persuasore'}
+});
 
-  let out = html;
-
-  mods.forEach(mod => {
-    if (mod.type !== 'single') return;
-
-    const nome = mod.key;
-    const livello = parseInt(mod.value, 10);
-    if (!Number.isFinite(livello)) return;
-
-    const nomeRx = escapeRx(nome).replace(/\s+/g, '\\s+');
-
-    const rx = new RegExp(
-      '(<tr[^>]*>\\s*<t[dh][^>]*>\\s*' + nomeRx + '\\s*<\\/t[dh]>\\s*<t[dh][^>]*>[\\s\\S]*?<div[^>]*class="indice"[^>]*data-html="livello)(\\d+)(")',
-      'i'
-    );
-
-    out = out.replace(rx, `$1${livello}$3`);
+function trovaDivBilanciati(html, classeCercata) {
+  // Non serializza il DOM: le schede contengono BBCode ForumFree che il DOM
+  // riscriverebbe e cancellerebbe. Restituisce solo gli intervalli da editare.
+  const rx=/<\/?div\b[^>]*>/gi, stack=[], blocchi=[];
+  let m;
+  while((m=rx.exec(html))){
+    if(/^<\/div/i.test(m[0])) {
+      const open=stack.pop();
+      if(open && open.classi.includes(classeCercata)) blocchi.push({...open,end:rx.lastIndex});
+    } else {
+      const cm=/\bclass\s*=\s*(["'])(.*?)\1/i.exec(m[0]);
+      const classi=cm?cm[2].split(/\s+/):[];
+      stack.push({start:m.index,openEnd:rx.lastIndex,classi});
+    }
+  }
+  return blocchi.sort((a,b)=>a.start-b.start);
+}
+function testoEtichettaSapienza(html) {
+  return normalizeText(String(html||'')
+    .replace(/\[URL(?:=[^\]]*)?\]/gi,'').replace(/\[\/URL\]/gi,'')
+    .replace(/<[^>]*>/g,' ').replace(/&agrave;/gi,'à')
+    .replace(/&egrave;/gi,'è').replace(/&nbsp;/gi,' ')
+    .replace(/\b(?:sapienza|magica|fisica|sociale)\b/gi,' ')
+    .replace(/^\s*:\s*/,'').trim());
+}
+function trovaRigheLivelli(html, nome) {
+  const risultati=[];
+  const voluto=normalizeText(nome);
+  const rx=/<tr\b[^>]*>[\s\S]*?<\/tr>/gi;
+  let m;
+  while((m=rx.exec(html))){
+    const r=m[0], celle=[...r.matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)];
+    if(celle.length<2) continue;
+    if(testoEtichettaSapienza(celle[0][1])!==voluto) continue;
+    const livello=/\bdata-html\s*=\s*(["'])livello([0-5])\1/i.exec(celle[1][1]);
+    if(!livello) continue;
+    risultati.push({start:m.index,end:rx.lastIndex,html:r,livello:Number(livello[2])});
+  }
+  return risultati;
+}
+function nuovoBloccoSapienzaSingola(nome, livello, tipo) {
+  const href='?t=80397118';
+  // Usa la stessa struttura .sapienza/.indice delle schede dei PG Adulti.
+  // La classe e il data-html sono indispensabili al CSS del forum.
+  return '\n<div class="sapienza"><table>\n'+
+    '<tr><th colspan="2">Sapienza '+tipo+': [URL='+href+']'+nome+'[/URL]</th></tr>\n'+
+    '<tr><td>'+nome+'</td><td><div class="indice" data-html="livello'+livello+'"></div></td></tr>\n'+
+    '<tr><td colspan="2">Sapienza '+nome+': '+livello+'/5</td></tr>\n'+
+    '</table></div>\n';
+}
+function trovaSezioneSapienze(html) {
+  // Localizza la scheda Sapienze; i gruppi di altre slide non vanno alterati.
+  const m=/<div\b[^>]*\bdata-label\s*=\s*["']Sapienze["'][^>]*>/i.exec(html);
+  if(!m)return null;
+  const rx=/<\/?div\b[^>]*>/gi;
+  rx.lastIndex=m.index+m[0].length;
+  let livello=1,tag;
+  while((tag=rx.exec(html))){
+    livello+=/^<\/div/i.test(tag[0])?-1:1;
+    if(livello===0)return {start:m.index,bodyStart:m.index+m[0].length,end:rx.lastIndex};
+  }
+  return null;
+}
+function inserisciNuovaSapienzaScheda(html, blocco, tipo) {
+  const sezione=trovaSezioneSapienze(html);
+  if(!sezione)return {html,ok:false};
+  const corpo=html.slice(sezione.bodyStart,sezione.end);
+  const sapienze=trovaDivBilanciati(corpo,'sapienza');
+  if(sapienze.length){
+    const ultimo=sapienze[sapienze.length-1];
+    const punto=sezione.bodyStart+ultimo.end;
+    return {html:html.slice(0,punto)+'\n'+blocco+html.slice(punto),ok:true,via:'blocco Sapienze'};
+  }
+  // Per schede senza ancora una Sapienza, inserisce dentro .cont, non
+  // direttamente accanto alla barra che identifica la slide.
+  const cont=/<div\b[^>]*class\s*=\s*["'][^"']*\bcont\b[^"']*["'][^>]*>/i.exec(corpo);
+  if(!cont)return {html,ok:false};
+  const punto=sezione.bodyStart+cont.index+cont[0].length;
+  return {html:html.slice(0,punto)+'\n'+blocco+html.slice(punto),ok:true,via:'contenitore Sapienze'};
+}
+// Catalogo completo condiviso dalla Lista della Spesa. L'applicazione ad una
+// scheda e' conservativa: le righe preesistenti non vengono riformattate e
+// i livelli non richiesti rimangono non acquisiti (—), non a Livello I.
+function schedaMappaConoscenzeAvanzate(){
+  const map = new Map();
+  for(const [sapienza,nomi] of Object.entries(SAPIENZE_MAGICHE_SCHEDA)){
+    for(const nome of nomi){
+      const norm = normalizeText(nome);
+      if(map.has(norm)) throw Error('Catalogo Sapienze ambiguo: '+nome);
+      map.set(norm,{sapienza,nome});
+    }
+  }
+  return map;
+}
+const CONOSCENZE_AVANZATE_SCHEDA = schedaMappaConoscenzeAvanzate();
+function schedaCellaLivello(livello){
+  return '<div class="indice" data-html="livello'+livello+'"></div>';
+}
+function schedaBlocchiSapienzaMagica(html, sapienza){
+  const voluto=normalizeText(sapienza);
+  return trovaDivBilanciati(html,'sapienza').filter(b=>{
+    const corpo=html.slice(b.start,b.end);
+    // I titoli contengono «Sapienza Magica: Nome» o «Sapienza Nome».
+    const headers=[...corpo.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th>/gi)].map(x=>testoEtichettaSapienza(x[1]));
+    if(headers.some(x=>x===voluto))return true;
+    const rows=[...corpo.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)];
+    const total=rows.some(r=>new RegExp('Sapienza\\s+(?:Magica\\s*:?[ \\t]*)?'+escapeRx(sapienza)+'\\s*:\\s*\\d+\\s*/\\s*25','i').test(r[1].replace(/<[^>]*>/g,' ')));
+    return total;
   });
+}
+function schedaRigheConoscenza(blocco, nome){
+  const voluto=normalizeText(nome);
+  const rows=[];
+  const rx=/<tr\b[^>]*>[\s\S]*?<\/tr>/gi;
+  let m;
+  while((m=rx.exec(blocco))){
+    const tds=[...m[0].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)];
+    if(tds.length!==2)continue;
+    if(testoEtichettaSapienza(tds[0][1])!==voluto)continue;
+    rows.push({start:m.index,end:rx.lastIndex,html:m[0],value:tds[1][1],valueStart:tds[1].index+tds[1][0].indexOf('>')+1,valueEnd:tds[1].index+tds[1][0].lastIndexOf('<')});
+  }
+  return rows;
+}
+function nuovoBloccoSapienzaMagica(nomeSapienza,levels){
+  const lines=['\n<div class="sapienza"><table>',
+    '<tr><th colspan="2">Sapienza Magica: '+nomeSapienza+'</th></tr>'];
+  let totale=0;
+  for(const nome of SAPIENZE_MAGICHE_SCHEDA[nomeSapienza]){
+    const l=Number(levels[normalizeText(nome)]||0);
+    totale+=l;
+    lines.push('<tr><td>'+nome+'</td><td>'+(l?schedaCellaLivello(l):'—')+'</td></tr>');
+  }
+  lines.push('<tr><td colspan="2">Sapienza '+nomeSapienza+': '+totale+'/25</td></tr>','</table></div>\n');
+  return lines.join('\n');
+}
+function aggiornaSapienzeAdultoConEsito(html, rawMods) {
+  const mods=parseKeyValueList(rawMods);
+  const esito={html,applicate:[],aggiunte:[],bloccanti:[],avvisi:[]};
+  if(!mods.length)return esito;
+  let out=html;
+  const richiesti=new Map();
+  // Fermare richieste ambigue prima di apportare la prima modifica.
+  for(const mod of mods){
+    if(mod.type!=='single'){
+      esito.bloccanti.push('Modifica Sapienza non riconosciuta: '+(mod.materia||mod.pattern||''));continue;
+    }
+    const nome=String(mod.key||'').trim(),livello=Number(mod.value),key=normalizeText(nome);
+    if(!Number.isInteger(livello)||livello<1||livello>5){
+      esito.bloccanti.push(nome+': Livello non valido ('+mod.value+').');continue;
+    }
+    if(richiesti.has(key) && richiesti.get(key)!==livello){
+      esito.bloccanti.push(nome+': due Livelli diversi nella stessa richiesta.');continue;
+    }
+    richiesti.set(key,livello);
+  }
+  if(esito.bloccanti.length)return esito;
 
-  return ricalcolaTotaliSapienze(out);
+  const nuoveMagiche=new Set();
+  for(const [key,livello] of richiesti){
+    const notaFisica=SAPIENZE_FISICHE_SCHEDA[key];
+    const notaSociale=SAPIENZE_SOCIALI_SCHEDA[key];
+    const av=CONOSCENZE_AVANZATE_SCHEDA.get(key);
+    if(!notaFisica && !notaSociale && !av){
+      esito.bloccanti.push(key+': Sapienza/Conoscenza non presente nel catalogo, nessuna aggiunta arbitraria.');
+      continue;
+    }
+    const nome=av?.nome||notaFisica?.nome||notaSociale?.nome||key;
+    const righe=trovaRigheLivelli(out,nome);
+    if(righe.length>1){
+      esito.bloccanti.push(nome+': più righe corrispondenti, modifica ambigua.');continue;
+    }
+    if(righe.length===1){
+      const r=righe[0];
+      if(livello<r.livello){
+        esito.bloccanti.push(nome+': Livello '+livello+' inferiore a '+r.livello+' già presente.');continue;
+      }
+      const nuovaRiga=r.html.replace(/(\bdata-html\s*=\s*["']livello)[0-5](["'])/i,(_,p1,p2)=>p1+livello+p2);
+      out=out.slice(0,r.start)+nuovaRiga+out.slice(r.end);
+      esito.applicate.push(nome+': '+livello);
+      continue;
+    }
+    if(notaFisica||notaSociale){
+      const tipo=notaFisica?'Fisica':'Sociale';
+      const canonical=notaFisica?.nome||notaSociale?.nome||nome;
+      const blocchi=trovaDivBilanciati(out,'sapienza');
+      if(blocchi.some(b=>new RegExp('(?:Sapienza\\s+)?'+escapeRx(key),'i').test(normalizeText(out.slice(b.start,b.end))))){
+        esito.bloccanti.push(canonical+': Sapienza esistente in un formato non riconosciuto, controllo manuale necessario.');continue;
+      }
+      const aggiunta=inserisciNuovaSapienzaScheda(out,nuovoBloccoSapienzaSingola(canonical,livello,tipo),tipo);
+      if(!aggiunta.ok){
+        esito.bloccanti.push(canonical+': sezione Sapienze assente nella Scheda Valori.');continue;
+      }
+      out=aggiunta.html;
+      esito.aggiunte.push(canonical+': '+livello);
+      esito.applicate.push(canonical+': '+livello);
+      continue;
+    }
+    // Magiche: identifica la Sapienza con il catalogo, non deducendola dal
+    // solo nome della Conoscenza o da un testo libero della richiesta.
+    const sapienza=av.sapienza;
+    const blocchi=schedaBlocchiSapienzaMagica(out,sapienza);
+    if(blocchi.length>1){
+      esito.bloccanti.push(sapienza+': più blocchi di Sapienza omonimi; nessun duplicato creato.');continue;
+    }
+    if(blocchi.length===1){
+      const b=blocchi[0],body=out.slice(b.start,b.end),rows=schedaRigheConoscenza(body,av.nome);
+      if(rows.length>1){
+        esito.bloccanti.push(av.nome+': riga duplicata nella stessa Sapienza.');continue;
+      }
+      let nuovo=body;
+      if(rows.length===1){
+        // La riga c'e' ma non possiede ancora un Livello (per esempio «—»).
+        const r=rows[0];
+        if(/\bdata-html\s*=\s*["']livello\d/i.test(r.value)){
+          esito.bloccanti.push(av.nome+': Livello presente ma markup non riconosciuto.');continue;
+        }
+        const valoreTestuale=r.value.replace(/<[^>]*>/g,' ').replace(/&nbsp;/gi,' ').trim();
+        if(!/^(?:—|–|-|0|)$/.test(valoreTestuale)){
+          esito.bloccanti.push(av.nome+': la riga contiene un valore non riconosciuto ('+valoreTestuale+').');continue;
+        }
+        const newRow=r.html.slice(0,r.valueStart)+schedaCellaLivello(livello)+r.html.slice(r.valueEnd);
+        nuovo=body.slice(0,r.start)+newRow+body.slice(r.end);
+      }else{
+        // Blocchi antichi parziali: aggiunge soltanto la Conoscenza richiesta.
+        const tail=/<tr\b[^>]*>\s*<td\b[^>]*\bcolspan\s*=\s*["']?2/i.exec(body);
+        const newRow='<tr><td>'+av.nome+'</td><td>'+schedaCellaLivello(livello)+'</td></tr>\n';
+        const pos=tail?tail.index:body.lastIndexOf('</table>');
+        if(pos<0){esito.bloccanti.push(sapienza+': tabella incompleta.');continue;}
+        nuovo=body.slice(0,pos)+newRow+body.slice(pos);
+      }
+      out=out.slice(0,b.start)+nuovo+out.slice(b.end);
+      esito.applicate.push(av.nome+': '+livello);
+      continue;
+    }
+    // Il blocco manca. Se il titolo della Sapienza e' presente in un formato
+    // non riconosciuto, non rischiare di creare un doppione.
+    const presenzaTitolo=new RegExp('Sapienza\\s+(?:Magica\\s*:\\s*)?'+escapeRx(sapienza)+'\\b','i');
+    if(presenzaTitolo.test(out)){
+      esito.bloccanti.push(sapienza+': Sapienza presente ma markup non riconosciuto.');continue;
+    }
+    if(nuoveMagiche.has(sapienza)){
+      esito.bloccanti.push(sapienza+': impossibile recuperare il nuovo blocco inserito.');continue;
+    }
+    // Raccoglie tutte le conoscenze di questa Sapienza richieste insieme;
+    // lascia le altre esplicitamente non acquisite.
+    const levels={};
+    for(const c of SAPIENZE_MAGICHE_SCHEDA[sapienza]){
+      const k=normalizeText(c);
+      if(richiesti.has(k))levels[k]=richiesti.get(k);
+    }
+    const aggiunta=inserisciNuovaSapienzaScheda(out,nuovoBloccoSapienzaMagica(sapienza,levels),'Magica');
+    if(!aggiunta.ok){
+      esito.bloccanti.push(sapienza+': sezione Sapienze assente o non identificabile.');continue;
+    }
+    out=aggiunta.html;
+    nuoveMagiche.add(sapienza);
+    esito.aggiunte.push('Sapienza '+sapienza);
+    esito.applicate.push(av.nome+': '+livello);
+  }
+  // Non consegnare MAI un output parzialmente aggiornato in caso di blocco.
+  if(esito.bloccanti.length)return esito;
+  esito.html=ricalcolaTotaliSapienze(out);
+  return esito;
+}
+
+function aggiornaSapienzeAdulto(html, rawMods) {
+  return aggiornaSapienzeAdultoConEsito(html,rawMods).html;
 }
 
 function ricalcolaTotaliSapienze(html) {
@@ -3458,7 +3799,13 @@ function elaboraTerminale() {
   html = risultatoConoscenze.html;
   const risultatoVoti = protocollo.tipoPg === 'studente' && Array.isArray(protocollo.votiStudente) && protocollo.votiStudente.length
     ? aggiornaVotiStudenteConAnni(html, protocollo.votiStudente, (document.getElementById('linkVoto').value || '').trim())
-    : {html: aggiornaPianoOSapienze(html), avvisi: []};
+    : protocollo.tipoPg === 'adulto'
+      ? aggiornaSapienzeAdultoConEsito(html, document.getElementById('modSapienze').value || '')
+      : {html: aggiornaPianoOSapienze(html), avvisi: []};
+  if (risultatoVoti.bloccanti?.length) {
+    alert('Accredito bloccato: alcune Sapienze non sono state aggiornate.\n\n'+risultatoVoti.bloccanti.join('\n')+'\n\nControlla il formato della Scheda Valori: non sono state prodotte modifiche incomplete.');
+    return;
+  }
   html = risultatoVoti.html;
   const risultatoMetadati = aggiornaMetadatiScheda(html, protocollo.tipoPg);
   html = risultatoMetadati.html;
@@ -3494,6 +3841,7 @@ function elaboraTerminale() {
       `${(protocollo.boxG || []).length} movimenti Bagaglio`
     ];
     if (risultatoConoscenze.richieste) parti.push(`${risultatoConoscenze.richieste} conoscenze`);
+    if (risultatoVoti.aggiunte?.length) parti.push(`${risultatoVoti.aggiunte.length} nuove Sapienze inserite`);
     if ((protocollo.catalogoAcquisti || []).length) parti.push(`${protocollo.catalogoAcquisti.length} acquisti catalogo`);
     if (syncCommercio.verificati) parti.push(`catalogo verificato ✓`);
     if ((protocollo.pozioniProdotte || []).length) parti.push(`${protocollo.pozioniProdotte.length} pozioni prodotte`);
@@ -3537,7 +3885,8 @@ function elaboraTerminale() {
         updatedValori.ignorati.join(', ') + '</b>.');
     }
 
-    if (risultatoVoti.avvisi?.length) avvisiStat.push('<b>⚠ Voti:</b> '+risultatoVoti.avvisi.map(escapeHtmlUI).join('<br>'));
+    if (risultatoVoti.avvisi?.length) avvisiStat.push('<b>⚠ Voti e Sapienze:</b> '+risultatoVoti.avvisi.map(escapeHtmlUI).join('<br>'));
+    if (risultatoVoti.aggiunte?.length) avvisiStat.push('<b>✓ Nuove Sapienze inserite:</b> '+risultatoVoti.aggiunte.map(escapeHtmlUI).join(', '));
     if (risultatoMetadati.avvisi?.length) avvisiStat.push('<b>⚠ Piano di studi:</b> '+risultatoMetadati.avvisi.map(escapeHtmlUI).join('<br>'));
 
     if (risultatoConoscenze.avvisi && risultatoConoscenze.avvisi.length) {
